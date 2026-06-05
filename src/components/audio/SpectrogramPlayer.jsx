@@ -22,6 +22,7 @@ export default function SpectrogramPlayer({ audioUrl, frequencyRange, altText })
   const [muted, setMuted] = useState(false);
   const [duration, setDuration] = useState(0);
   const [currentTime, setCurrentTime] = useState(0);
+  const [nyquist, setNyquist] = useState(null);
   const gainNodeRef = useRef(null);
 
   const loadAudio = useCallback(async () => {
@@ -35,6 +36,7 @@ export default function SpectrogramPlayer({ audioUrl, frequencyRange, altText })
     const buffer = await ctx.decodeAudioData(arrayBuffer);
     audioBufferRef.current = buffer;
     setDuration(buffer.duration);
+    setNyquist(buffer.sampleRate / 2);
     setIsLoaded(true);
     setIsLoading(false);
   }, [audioUrl, isLoaded]);
@@ -243,15 +245,18 @@ export default function SpectrogramPlayer({ audioUrl, frequencyRange, altText })
             <div className="w-6 h-6 border-2 border-secondary border-t-transparent rounded-full animate-spin" />
           </div>
         )}
-        {/* Freq axis label */}
-        {frequencyRange && (
-          <div className="absolute left-2 top-2 bottom-2 flex flex-col justify-between">
-            <span className="text-[10px] font-mono text-primary-foreground/50">
-              {frequencyRange.split('-')[1] || ''}
-            </span>
-            <span className="text-[10px] font-mono text-primary-foreground/50">
-              {frequencyRange.split('-')[0] || '0'}
-            </span>
+        {/* Freq axis labels — derived from actual audio sample rate */}
+        {nyquist && (
+          <div className="absolute left-2 top-2 bottom-2 flex flex-col justify-between pointer-events-none">
+            {[1, 0.75, 0.5, 0.25, 0].map(fraction => {
+              const freq = nyquist * fraction;
+              const label = freq >= 1000 ? `${(freq / 1000).toFixed(freq % 1000 === 0 ? 0 : 1)} kHz` : `${Math.round(freq)} Hz`;
+              return (
+                <span key={fraction} className="text-[10px] font-mono text-primary-foreground/50 leading-none">
+                  {label}
+                </span>
+              );
+            })}
           </div>
         )}
       </div>
