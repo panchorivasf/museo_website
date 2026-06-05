@@ -15,39 +15,14 @@ export const AuthProvider = ({ children }) => {
       setIsLoadingAuth(false);
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'SIGNED_IN' && session?.user) {
-        try {
-          const { data: allowed } = await supabase
-            .from('allowed_admins')
-            .select('email')
-            .eq('email', session.user.email)
-            .maybeSingle();
-
-          if (!allowed) {
-            await supabase.auth.signOut();
-            setUser(null);
-            setIsAuthenticated(false);
-            setIsLoadingAuth(false);
-            window.location.href = '/login?error=unauthorized';
-            return;
-          }
-        } catch {
-          // if the check fails, still allow the session
-        }
-
-        if (session?.user?.user_metadata?.invited_at) {
-          window.location.href = '/reset-password';
-        }
-      }
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      setUser(session?.user ?? null);
+      setIsAuthenticated(!!session?.user);
+      setIsLoadingAuth(false);
 
       if (event === 'PASSWORD_RECOVERY') {
         window.location.href = '/reset-password';
       }
-
-      setUser(session?.user ?? null);
-      setIsAuthenticated(!!session?.user);
-      setIsLoadingAuth(false);
     });
 
     return () => subscription.unsubscribe();
