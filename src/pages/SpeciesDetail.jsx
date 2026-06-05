@@ -76,8 +76,22 @@ export default function SpeciesDetail() {
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
         <div className="lg:col-span-3 space-y-6">
           {species.image_url && (
-            <div className="rounded-xl overflow-hidden aspect-[16/9] bg-muted">
-              <img src={species.image_url} alt={species.common_name} className="w-full h-full object-cover" />
+            <div>
+              <div className="rounded-xl overflow-hidden aspect-[16/9] bg-muted">
+                <img src={species.image_url} alt={species.common_name} className="w-full h-full object-cover" />
+              </div>
+              {species.image_author && (
+                <p className="text-xs text-muted-foreground mt-1.5 px-1">
+                  {species.image_license && <span>{species.image_license} </span>}
+                  © {species.image_author}
+                  {species.image_source_platform && species.image_source_url && (
+                    <> · <a href={species.image_source_url} target="_blank" rel="noopener noreferrer" className="underline hover:text-primary">{species.image_source_platform}</a></>
+                  )}
+                  {species.image_source_platform && !species.image_source_url && (
+                    <> · {species.image_source_platform}</>
+                  )}
+                </p>
+              )}
             </div>
           )}
 
@@ -120,7 +134,6 @@ export default function SpeciesDetail() {
             {[
               { label: 'Orden', value: species.order },
               { label: 'Familia', value: species.family },
-              { label: 'Género', value: species.genus },
             ].filter(t => t.value).map(t => (
               <div key={t.label} className="flex justify-between items-center border-b border-border/50 pb-2 last:border-0 last:pb-0">
                 <span className="text-xs font-mono text-muted-foreground uppercase">{t.label}</span>

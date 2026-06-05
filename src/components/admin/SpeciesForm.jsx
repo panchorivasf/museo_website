@@ -47,8 +47,11 @@ export default function SpeciesForm({ species, onClose }) {
     taxon: species?.taxon || 'aves',
     order: species?.order || '',
     family: species?.family || '',
-    genus: species?.genus || '',
     conservation_status: species?.conservation_status || '',
+    image_author: species?.image_author || '',
+    image_license: species?.image_license || '',
+    image_source_platform: species?.image_source_platform || '',
+    image_source_url: species?.image_source_url || '',
     description: species?.description || '',
     sound_description: species?.sound_description || '',
     audio_url: species?.audio_url || '',
@@ -185,6 +188,50 @@ export default function SpeciesForm({ species, onClose }) {
               {uploading ? 'Subiendo...' : 'Subir audio'}
               <input type="file" accept="audio/*" className="hidden" onChange={e => handleFileUpload(e, 'audio_url')} disabled={uploading} />
             </label>
+          </div>
+        </div>
+
+        <div className="border border-border rounded-lg p-4 space-y-3">
+          <p className="text-xs font-heading uppercase tracking-widest text-muted-foreground font-semibold">Atribución de imagen</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label>© Autor/a</Label>
+              <Input value={form.image_author} onChange={e => update('image_author', e.target.value)} placeholder="ej: Juan Pérez" />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Licencia</Label>
+              <Select value={form.image_license} onValueChange={v => update('image_license', v)}>
+                <SelectTrigger><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="CC BY">CC BY</SelectItem>
+                  <SelectItem value="CC BY-SA">CC BY-SA</SelectItem>
+                  <SelectItem value="CC BY-NC">CC BY-NC</SelectItem>
+                  <SelectItem value="CC BY-NC-SA">CC BY-NC-SA</SelectItem>
+                  <SelectItem value="CC BY-ND">CC BY-ND</SelectItem>
+                  <SelectItem value="CC BY-NC-ND">CC BY-NC-ND</SelectItem>
+                  <SelectItem value="CC0">CC0 (Dominio público)</SelectItem>
+                  <SelectItem value="©">© Todos los derechos reservados</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Plataforma</Label>
+              <Select value={form.image_source_platform} onValueChange={v => update('image_source_platform', v)}>
+                <SelectTrigger><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="iNaturalist">iNaturalist</SelectItem>
+                  <SelectItem value="Flickr">Flickr</SelectItem>
+                  <SelectItem value="Wikimedia Commons">Wikimedia Commons</SelectItem>
+                  <SelectItem value="eBird">eBird</SelectItem>
+                  <SelectItem value="GBIF">GBIF</SelectItem>
+                  <SelectItem value="Otro">Otro</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>URL del autor/fuente</Label>
+              <Input value={form.image_source_url} onChange={e => update('image_source_url', e.target.value)} placeholder="https://..." />
+            </div>
           </div>
         </div>
 
