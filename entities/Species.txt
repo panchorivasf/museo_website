@@ -1,0 +1,99 @@
+{
+  "name": "Species",
+  "type": "object",
+  "properties": {
+    "common_name": {
+      "type": "string",
+      "description": "Nombre com\u00fan de la especie"
+    },
+    "scientific_name": {
+      "type": "string",
+      "description": "Nombre cient\u00edfico"
+    },
+    "taxon": {
+      "type": "string",
+      "enum": [
+        "aves",
+        "insectos",
+        "anfibios",
+        "mamiferos_marinos",
+        "mamiferos_terrestres"
+      ],
+      "description": "Grupo taxon\u00f3mico"
+    },
+    "order": {
+      "type": "string",
+      "description": "Orden taxon\u00f3mico"
+    },
+    "family": {
+      "type": "string",
+      "description": "Familia taxon\u00f3mica"
+    },
+    "genus": {
+      "type": "string",
+      "description": "G\u00e9nero"
+    },
+    "conservation_status": {
+      "type": "string",
+      "enum": [
+        "LC",
+        "NT",
+        "VU",
+        "EN",
+        "CR",
+        "EW",
+        "EX",
+        "DD",
+        "NE"
+      ],
+      "description": "Estado de conservaci\u00f3n IUCN"
+    },
+    "description": {
+      "type": "string",
+      "description": "Descripci\u00f3n general de la especie"
+    },
+    "sound_description": {
+      "type": "string",
+      "description": "Descripci\u00f3n narrativa del sonido"
+    },
+    "audio_url": {
+      "type": "string",
+      "description": "URL del archivo de audio"
+    },
+    "image_url": {
+      "type": "string",
+      "description": "URL de imagen principal de la especie"
+    },
+    "habitat": {
+      "type": "string",
+      "description": "Descripci\u00f3n del h\u00e1bitat"
+    },
+    "frequency_range": {
+      "type": "string",
+      "description": "Rango de frecuencias del sonido (ej: 2-8 kHz)"
+    },
+    "recording_location": {
+      "type": "string",
+      "description": "Lugar de grabaci\u00f3n"
+    },
+    "recording_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Fecha de grabaci\u00f3n"
+    },
+    "recordist": {
+      "type": "string",
+      "description": "Nombre del grabador"
+    },
+    "featured": {
+      "type": "boolean",
+      "default": false,
+      "description": "Mostrar en la p\u00e1gina principal"
+    }
+  },
+  "required": [
+    "common_name",
+    "scientific_name",
+    "taxon"
+  ]
+}

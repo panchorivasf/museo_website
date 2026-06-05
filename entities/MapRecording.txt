@@ -1,0 +1,64 @@
+{
+  "name": "MapRecording",
+  "type": "object",
+  "properties": {
+    "species_name": {
+      "type": "string",
+      "description": "Nombre com\u00fan de la especie"
+    },
+    "scientific_name": {
+      "type": "string",
+      "description": "Nombre cient\u00edfico"
+    },
+    "taxon": {
+      "type": "string",
+      "enum": [
+        "aves",
+        "insectos",
+        "anfibios",
+        "mamiferos_marinos",
+        "mamiferos_terrestres"
+      ],
+      "description": "Grupo taxon\u00f3mico"
+    },
+    "latitude": {
+      "type": "number",
+      "description": "Latitud de la grabaci\u00f3n"
+    },
+    "longitude": {
+      "type": "number",
+      "description": "Longitud de la grabaci\u00f3n"
+    },
+    "location_name": {
+      "type": "string",
+      "description": "Nombre del lugar"
+    },
+    "audio_url": {
+      "type": "string",
+      "description": "URL del archivo de audio"
+    },
+    "recording_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Fecha de grabaci\u00f3n"
+    },
+    "recordist": {
+      "type": "string",
+      "description": "Nombre del grabador"
+    },
+    "description": {
+      "type": "string",
+      "description": "Descripci\u00f3n de la grabaci\u00f3n"
+    },
+    "elevation": {
+      "type": "number",
+      "description": "Elevaci\u00f3n en metros"
+    }
+  },
+  "required": [
+    "species_name",
+    "taxon",
+    "latitude",
+    "longitude"
+  ]
+}

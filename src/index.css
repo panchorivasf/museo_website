@@ -1,0 +1,102 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 100 20% 98.5%;
+    --foreground: 183 82% 18%;
+    --card: 0 0% 100%;
+    --card-foreground: 183 82% 18%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 183 82% 18%;
+    --primary: 183 82% 18%;
+    --primary-foreground: 100 20% 98.5%;
+    --secondary: 163 33% 51%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 160 20% 94%;
+    --muted-foreground: 183 30% 35%;
+    --accent: 87 25% 55%;
+    --accent-foreground: 183 82% 18%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 160 20% 88%;
+    --input: 160 20% 88%;
+    --ring: 186 85% 29%;
+    --chart-1: 183 82% 18%;
+    --chart-2: 186 85% 29%;
+    --chart-3: 163 33% 51%;
+    --chart-4: 87 25% 55%;
+    --chart-5: 46 95% 38%;
+    --radius: 0.75rem;
+    --font-heading: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
+    --font-body: 'Inter', ui-sans-serif, system-ui, sans-serif;
+    --font-display: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
+    --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    --ocher: 46 95% 38%;
+    --ocher-foreground: 0 0% 100%;
+    --teal: 186 85% 29%;
+    --teal-foreground: 0 0% 100%;
+    --sidebar-background: 183 82% 18%;
+    --sidebar-foreground: 100 20% 98.5%;
+    --sidebar-primary: 186 85% 29%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 183 60% 22%;
+    --sidebar-accent-foreground: 100 20% 98.5%;
+    --sidebar-border: 183 60% 25%;
+    --sidebar-ring: 46 95% 38%;
+  }
+
+  .dark {
+    --background: 183 60% 6%;
+    --foreground: 100 20% 95%;
+    --card: 183 50% 10%;
+    --card-foreground: 100 20% 95%;
+    --popover: 183 50% 10%;
+    --popover-foreground: 100 20% 95%;
+    --primary: 163 33% 51%;
+    --primary-foreground: 183 82% 12%;
+    --secondary: 186 85% 29%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 183 40% 14%;
+    --muted-foreground: 160 20% 60%;
+    --accent: 87 25% 55%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 183 40% 18%;
+    --input: 183 40% 18%;
+    --ring: 163 33% 51%;
+    --chart-1: 163 33% 51%;
+    --chart-2: 186 85% 29%;
+    --chart-3: 87 25% 55%;
+    --chart-4: 46 95% 38%;
+    --chart-5: 183 82% 18%;
+    --ocher: 46 95% 50%;
+    --ocher-foreground: 183 82% 12%;
+    --teal: 186 85% 40%;
+    --teal-foreground: 0 0% 100%;
+    --sidebar-background: 183 60% 8%;
+    --sidebar-foreground: 100 20% 95%;
+    --sidebar-primary: 163 33% 51%;
+    --sidebar-primary-foreground: 183 82% 12%;
+    --sidebar-accent: 183 50% 14%;
+    --sidebar-accent-foreground: 100 20% 95%;
+    --sidebar-border: 183 40% 18%;
+    --sidebar-ring: 163 33% 51%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground font-body;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-heading);
+  }
+}
