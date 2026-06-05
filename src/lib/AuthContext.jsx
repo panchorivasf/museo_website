@@ -15,11 +15,29 @@ export const AuthProvider = ({ children }) => {
       setIsLoadingAuth(false);
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_IN' && session?.user) {
+        const { data: allowed } = await supabase
+          .from('allowed_admins')
+          .select('email')
+          .eq('email', session.user.email)
+          .maybeSingle();
+
+        if (!allowed) {
+          await supabase.auth.signOut();
+          setUser(null);
+          setIsAuthenticated(false);
+          setIsLoadingAuth(false);
+          window.location.href = '/login?error=unauthorized';
+          return;
+        }
+      }
+
       setUser(session?.user ?? null);
       setIsAuthenticated(!!session?.user);
       setIsLoadingAuth(false);
-      if (event === 'PASSWORD_RECOVERY' || event === 'USER_UPDATED' ||
+
+      if (event === 'PASSWORD_RECOVERY' ||
           (event === 'SIGNED_IN' && session?.user?.user_metadata?.invited_at)) {
         window.location.href = '/reset-password';
       }

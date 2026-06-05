@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/api/supabaseClient";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,13 @@ export default function Login() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('error') === 'unauthorized') {
+      setError('Tu cuenta no está autorizada para acceder a este sitio.');
+    }
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
