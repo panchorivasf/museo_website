@@ -224,6 +224,7 @@ export default function SpeciesForm({ species, onClose }) {
                   <SelectItem value="Wikimedia Commons">Wikimedia Commons</SelectItem>
                   <SelectItem value="eBird">eBird</SelectItem>
                   <SelectItem value="GBIF">GBIF</SelectItem>
+                  <SelectItem value="Instagram">Instagram</SelectItem>
                   <SelectItem value="Otro">Otro</SelectItem>
                 </SelectContent>
               </Select>

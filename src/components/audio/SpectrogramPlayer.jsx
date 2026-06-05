@@ -245,18 +245,24 @@ export default function SpectrogramPlayer({ audioUrl, frequencyRange, altText })
             <div className="w-6 h-6 border-2 border-secondary border-t-transparent rounded-full animate-spin" />
           </div>
         )}
-        {/* Freq axis labels — derived from actual audio sample rate */}
+        {/* Freq axis labels at 10 kHz intervals */}
         {nyquist && (
-          <div className="absolute left-2 top-2 bottom-2 flex flex-col justify-between pointer-events-none">
-            {[1, 0.75, 0.5, 0.25, 0].map(fraction => {
-              const freq = nyquist * fraction;
-              const label = freq >= 1000 ? `${(freq / 1000).toFixed(freq % 1000 === 0 ? 0 : 1)} kHz` : `${Math.round(freq)} Hz`;
-              return (
-                <span key={fraction} className="text-[10px] font-mono text-primary-foreground/50 leading-none">
-                  {label}
-                </span>
-              );
-            })}
+          <div className="absolute left-2 top-0 bottom-0 pointer-events-none">
+            {Array.from({ length: Math.floor(nyquist / 10000) + 1 }, (_, i) => i * 10000)
+              .filter(f => f <= nyquist)
+              .map(freq => {
+                const pct = 1 - freq / nyquist;
+                const label = freq === 0 ? '0 Hz' : `${freq / 1000} kHz`;
+                return (
+                  <span
+                    key={freq}
+                    className="absolute text-[10px] font-mono text-primary-foreground/50 leading-none"
+                    style={{ top: `${pct * 100}%`, transform: 'translateY(-50%)' }}
+                  >
+                    {label}
+                  </span>
+                );
+              })}
           </div>
         )}
       </div>
