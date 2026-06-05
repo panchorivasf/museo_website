@@ -54,11 +54,8 @@ export default function Home() {
             transition={{ duration: 0.8 }}
             className="max-w-2xl"
           >
-            <div className="flex items-center gap-2 mb-6">
-              <AudioWaveform className="w-5 h-5 text-secondary" />
-              <span className="text-sm font-heading uppercase tracking-[0.25em] text-secondary font-medium">
-                Museo Bioacústico
-              </span>
+            <div className="mb-8">
+              <img src="/logo.png" alt="Museo Bioacústico" className="h-24 object-contain" />
             </div>
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-display font-bold text-white leading-[1.1] tracking-tight">
               Escucha el<br />
