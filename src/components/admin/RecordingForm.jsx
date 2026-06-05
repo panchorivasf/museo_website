@@ -41,11 +41,24 @@ export default function RecordingForm({ recording, onClose }) {
     queryFn: async () => {
       const { data } = await supabase
         .from('species')
-        .select('id, common_name, scientific_name, taxon')
+        .select('id, common_name, scientific_name, taxon, recording_location, recording_date, recordist, audio_url')
         .order('common_name');
       return data || [];
     },
   });
+
+  const handleSpeciesSelect = (id) => {
+    const s = speciesList.find(sp => sp.id === id);
+    if (!s) return;
+    setForm(prev => ({
+      ...prev,
+      species_id: id,
+      location_name: prev.location_name || s.recording_location || '',
+      recording_date: prev.recording_date || s.recording_date || '',
+      recordist: prev.recordist || s.recordist || '',
+      audio_url: prev.audio_url || s.audio_url || '',
+    }));
+  };
 
   const mutation = useMutation({
     mutationFn: async (data) => {
@@ -108,7 +121,7 @@ export default function RecordingForm({ recording, onClose }) {
       <form onSubmit={handleSubmit} className="space-y-5">
         <div className="space-y-1.5">
           <Label>Especie *</Label>
-          <Select value={form.species_id} onValueChange={v => update('species_id', v)} required>
+          <Select value={form.species_id} onValueChange={handleSpeciesSelect} required>
             <SelectTrigger>
               <SelectValue placeholder="Seleccionar especie..." />
             </SelectTrigger>

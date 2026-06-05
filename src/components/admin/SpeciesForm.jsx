@@ -141,7 +141,7 @@ export default function SpeciesForm({ species, onClose }) {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-1.5">
             <Label>Orden</Label>
             <Input value={form.order} onChange={e => update('order', e.target.value)} />
@@ -149,10 +149,6 @@ export default function SpeciesForm({ species, onClose }) {
           <div className="space-y-1.5">
             <Label>Familia</Label>
             <Input value={form.family} onChange={e => update('family', e.target.value)} />
-          </div>
-          <div className="space-y-1.5">
-            <Label>Género</Label>
-            <Input value={form.genus} onChange={e => update('genus', e.target.value)} />
           </div>
         </div>
 
