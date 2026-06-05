@@ -53,6 +53,8 @@ function valueToColor(v) {
   return [Math.round((r + m) * 255), Math.round((g + m) * 255), Math.round((b + m) * 255)];
 }
 
+const VISIBLE_SECONDS = 10; // seconds visible in the canvas at once
+
 function buildSpectrogramImage(audioBuffer, canvasWidth, canvasHeight) {
   const fftSize = 1024;
   const hopSize = Math.floor(fftSize / 4);
@@ -63,7 +65,6 @@ function buildSpectrogramImage(audioBuffer, canvasWidth, canvasHeight) {
   const re = new Float32Array(fftSize);
   const im = new Float32Array(fftSize);
 
-  // Collect magnitude frames
   const frames = [];
   for (let f = 0; f < numFrames; f++) {
     const start = f * hopSize;
@@ -82,23 +83,26 @@ function buildSpectrogramImage(audioBuffer, canvasWidth, canvasHeight) {
     frames.push(mags);
   }
 
-  // Render to offscreen canvas
+  // Offscreen canvas is wider than display by the zoom factor
+  const duration = audioBuffer.duration;
+  const zoomFactor = duration > VISIBLE_SECONDS ? duration / VISIBLE_SECONDS : 1;
+  const offscreenWidth = Math.round(canvasWidth * zoomFactor);
+
   const offscreen = document.createElement('canvas');
-  offscreen.width = canvasWidth;
+  offscreen.width = offscreenWidth;
   offscreen.height = canvasHeight;
   const ctx = offscreen.getContext('2d');
-  const imageData = ctx.createImageData(canvasWidth, canvasHeight);
+  const imageData = ctx.createImageData(offscreenWidth, canvasHeight);
   const data = imageData.data;
 
-  for (let col = 0; col < canvasWidth; col++) {
-    const frameIdx = Math.floor((col / canvasWidth) * frames.length);
+  for (let col = 0; col < offscreenWidth; col++) {
+    const frameIdx = Math.floor((col / offscreenWidth) * frames.length);
     const frame = frames[Math.min(frameIdx, frames.length - 1)];
     for (let row = 0; row < canvasHeight; row++) {
-      // row 0 = top = high freq; row canvasHeight-1 = bottom = low freq
       const binIdx = Math.floor(((canvasHeight - 1 - row) / canvasHeight) * numBins);
       const v = frame[Math.min(binIdx, numBins - 1)];
       const [r, g, b] = valueToColor(v);
-      const idx = (row * canvasWidth + col) * 4;
+      const idx = (row * offscreenWidth + col) * 4;
       data[idx] = r; data[idx + 1] = g; data[idx + 2] = b; data[idx + 3] = 255;
     }
   }
@@ -128,72 +132,72 @@ export default function SpectrogramPlayer({ audioUrl, altText }) {
   const [currentTime, setCurrentTime] = useState(0);
   const [nyquist, setNyquist] = useState(null);
 
-  const drawFrame = useCallback(() => {
+  const renderAtTime = useCallback((t) => {
     const canvas = canvasRef.current;
     const offscreen = offscreenRef.current;
     if (!canvas || !offscreen) return;
 
     const ctx = canvas.getContext('2d');
-    ctx.drawImage(offscreen, 0, 0, canvas.width, canvas.height);
+    const W = canvas.width;
+    const H = canvas.height;
+    const dur = audioBufferRef.current?.duration || 0;
+    const offW = offscreen.width;
+    const centerX = W / 2;
+
+    // Position of playhead in offscreen canvas
+    const playheadOffscreen = dur > 0 ? (t / dur) * offW : 0;
+
+    let srcX, playheadScreen;
+    if (playheadOffscreen <= centerX) {
+      srcX = 0;
+      playheadScreen = playheadOffscreen;
+    } else if (playheadOffscreen >= offW - centerX) {
+      srcX = offW - W;
+      playheadScreen = playheadOffscreen - srcX;
+    } else {
+      srcX = playheadOffscreen - centerX;
+      playheadScreen = centerX;
+    }
+
+    ctx.clearRect(0, 0, W, H);
+    ctx.drawImage(offscreen, srcX, 0, W, H, 0, 0, W, H);
 
     // Frequency axis labels
     if (nyquist) {
       const step = 10000;
-      for (let f = 0; f <= nyquist; f += step) {
-        const y = canvas.height * (1 - f / nyquist);
-        const label = f === 0 ? '0 Hz' : `${f / 1000} kHz`;
-        ctx.fillStyle = 'rgba(255,255,255,0.5)';
-        ctx.font = `${Math.round(canvas.height * 0.055)}px monospace`;
-        ctx.fillText(label, 6, y - 3);
+      ctx.font = `${Math.round(H * 0.055)}px monospace`;
+      for (let f = step; f < nyquist; f += step) {
+        const y = H * (1 - f / nyquist);
+        ctx.fillStyle = 'rgba(0,0,0,0.4)';
+        ctx.fillRect(4, y - 12, 42, 13);
+        ctx.fillStyle = 'rgba(255,255,255,0.7)';
+        ctx.fillText(`${f / 1000} kHz`, 5, y - 2);
       }
     }
 
     // Playhead
+    ctx.strokeStyle = '#BB9F06';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(playheadScreen, 0);
+    ctx.lineTo(playheadScreen, H);
+    ctx.stroke();
+  }, [nyquist]);
+
+  const drawFrame = useCallback(() => {
     const dur = audioBufferRef.current?.duration || 0;
     if (dur > 0 && audioContextRef.current && startTimeRef.current > 0) {
       const elapsed = (audioContextRef.current.currentTime - startTimeRef.current) * playbackRateRef.current;
       const t = Math.min(pauseOffsetRef.current + elapsed, dur);
       setCurrentTime(t);
-      const x = (t / dur) * canvas.width;
-      ctx.strokeStyle = '#BB9F06';
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(x, 0);
-      ctx.lineTo(x, canvas.height);
-      ctx.stroke();
+      renderAtTime(t);
     }
-
     animFrameRef.current = requestAnimationFrame(drawFrame);
-  }, [nyquist]);
+  }, [renderAtTime]);
 
   const drawStatic = useCallback(() => {
-    const canvas = canvasRef.current;
-    const offscreen = offscreenRef.current;
-    if (!canvas || !offscreen) return;
-    const ctx = canvas.getContext('2d');
-    ctx.drawImage(offscreen, 0, 0, canvas.width, canvas.height);
-    if (nyquist) {
-      const step = 10000;
-      for (let f = 0; f <= nyquist; f += step) {
-        const y = canvas.height * (1 - f / nyquist);
-        const label = f === 0 ? '0 Hz' : `${f / 1000} kHz`;
-        ctx.fillStyle = 'rgba(255,255,255,0.5)';
-        ctx.font = `${Math.round(canvas.height * 0.055)}px monospace`;
-        ctx.fillText(label, 6, y - 3);
-      }
-    }
-    // Draw playhead at current pause position
-    const dur = audioBufferRef.current?.duration || 0;
-    if (dur > 0) {
-      const x = (pauseOffsetRef.current / dur) * canvas.width;
-      ctx.strokeStyle = '#BB9F06';
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(x, 0);
-      ctx.lineTo(x, canvas.height);
-      ctx.stroke();
-    }
-  }, [nyquist]);
+    renderAtTime(pauseOffsetRef.current);
+  }, [renderAtTime]);
 
   const loadAudio = useCallback(async () => {
     if (!audioUrl || isLoaded) return;
