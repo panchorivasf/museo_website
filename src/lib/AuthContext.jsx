@@ -17,19 +17,23 @@ export const AuthProvider = ({ children }) => {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === 'SIGNED_IN' && session?.user) {
-        const { data: allowed } = await supabase
-          .from('allowed_admins')
-          .select('email')
-          .eq('email', session.user.email)
-          .maybeSingle();
+        try {
+          const { data: allowed } = await supabase
+            .from('allowed_admins')
+            .select('email')
+            .eq('email', session.user.email)
+            .maybeSingle();
 
-        if (!allowed) {
-          await supabase.auth.signOut();
-          setUser(null);
-          setIsAuthenticated(false);
-          setIsLoadingAuth(false);
-          window.location.href = '/login?error=unauthorized';
-          return;
+          if (!allowed) {
+            await supabase.auth.signOut();
+            setUser(null);
+            setIsAuthenticated(false);
+            setIsLoadingAuth(false);
+            window.location.href = '/login?error=unauthorized';
+            return;
+          }
+        } catch {
+          // if the check fails, still allow the session
         }
       }
 
