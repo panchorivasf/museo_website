@@ -79,7 +79,7 @@ export default function SpeciesForm({ species, onClose }) {
         if (error) throw error;
       } else {
         const { error } = await supabase.from('species').insert(data);
-        if (error) throw error;
+        if (error) { console.error('Insert error:', error); throw error; }
       }
     },
     onSuccess: () => {
