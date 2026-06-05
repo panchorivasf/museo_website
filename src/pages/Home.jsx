@@ -163,13 +163,8 @@ export default function Home() {
 
       {/* Landscape CTA */}
       <section className="relative min-h-[50vh] flex items-center">
-        <div className="absolute inset-0">
-          <img
-            src="/images/hero-2.jpg"
-            alt="Paisaje del río Biobío al amanecer"
-            className="w-full h-full object-cover"
-          />
-          <div className="absolute inset-0 bg-primary/70" />
+        <div className="absolute inset-0 bg-gradient-to-br from-[#062a2e] via-[#0a3d35] to-[#1a5c40]">
+          <div className="absolute inset-0 bg-primary/40" />
         </div>
         <div className="relative z-10 max-w-3xl mx-auto px-4 py-20 text-center">
           <motion.div

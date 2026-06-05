@@ -7,9 +7,7 @@ export default function About() {
     <div>
       {/* Hero */}
       <section className="relative overflow-hidden bg-primary py-20 sm:py-28">
-        <div className="absolute inset-0 opacity-10">
-          <img src="/images/hero-1.jpg" alt="" className="w-full h-full object-cover" aria-hidden="true" />
-        </div>
+        <div className="absolute inset-0 opacity-20 bg-gradient-to-br from-secondary to-primary" />
         <div className="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
             <AudioWaveform className="w-10 h-10 text-secondary mx-auto mb-6" />
@@ -85,11 +83,11 @@ export default function About() {
       {/* Images */}
       <section className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-          <div className="rounded-2xl overflow-hidden aspect-[4/3]">
-            <img src="/images/hero-1.jpg" alt="Paisaje bioacústico" className="w-full h-full object-cover" />
+          <div className="rounded-2xl overflow-hidden aspect-[4/3] bg-gradient-to-br from-[#062a2e] to-[#0a3d35] flex items-center justify-center">
+            <span className="text-white/30 text-sm font-heading uppercase tracking-widest">Fotografía próximamente</span>
           </div>
-          <div className="rounded-2xl overflow-hidden aspect-[4/3]">
-            <img src="/images/hero-2.jpg" alt="Río Biobío al amanecer" className="w-full h-full object-cover" />
+          <div className="rounded-2xl overflow-hidden aspect-[4/3] bg-gradient-to-br from-[#0a3d35] to-[#1a5c40] flex items-center justify-center">
+            <span className="text-white/30 text-sm font-heading uppercase tracking-widest">Fotografía próximamente</span>
           </div>
         </div>
       </section>
