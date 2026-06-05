@@ -53,7 +53,7 @@ function valueToColor(v) {
   return [Math.round((r + m) * 255), Math.round((g + m) * 255), Math.round((b + m) * 255)];
 }
 
-const VISIBLE_SECONDS = 10; // seconds visible in the canvas at once
+const VISIBLE_SECONDS = 4; // seconds visible in the canvas at once
 
 function buildSpectrogramImage(audioBuffer, canvasWidth, canvasHeight) {
   const fftSize = 1024;

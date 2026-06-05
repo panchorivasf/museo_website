@@ -7,7 +7,8 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { X, Upload, Loader2 } from 'lucide-react';
+import { X, Upload, Loader2, Map } from 'lucide-react';
+import LocationPicker from './LocationPicker';
 
 const taxonOptions = [
   { value: 'aves', label: 'Aves' },
@@ -59,6 +60,8 @@ export default function SpeciesForm({ species, onClose }) {
     habitat: species?.habitat || '',
     frequency_range: species?.frequency_range || '',
     recording_location: species?.recording_location || '',
+    recording_latitude: species?.recording_latitude || '',
+    recording_longitude: species?.recording_longitude || '',
     recording_date: species?.recording_date || '',
     recordist: species?.recordist || '',
     featured: species?.featured || false,
@@ -254,6 +257,26 @@ export default function SpeciesForm({ species, onClose }) {
             <Input value={form.recordist} onChange={e => update('recordist', e.target.value)} />
           </div>
         </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="space-y-1.5">
+            <Label>Latitud de grabación</Label>
+            <Input type="number" step="any" value={form.recording_latitude} onChange={e => update('recording_latitude', e.target.value)} placeholder="-36.82" />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Longitud de grabación</Label>
+            <Input type="number" step="any" value={form.recording_longitude} onChange={e => update('recording_longitude', e.target.value)} placeholder="-73.05" />
+          </div>
+        </div>
+
+        <LocationPicker
+          latitude={form.recording_latitude}
+          longitude={form.recording_longitude}
+          onLocationSelect={(lat, lng) => {
+            update('recording_latitude', lat.toFixed(6));
+            update('recording_longitude', lng.toFixed(6));
+          }}
+        />
 
         <div className="flex items-center gap-3">
           <Switch checked={form.featured} onCheckedChange={v => update('featured', v)} />

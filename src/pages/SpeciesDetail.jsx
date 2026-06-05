@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import SpectrogramPlayer from '@/components/audio/SpectrogramPlayer';
 import ReactMarkdown from 'react-markdown';
+import SpeciesLocationMap from '@/components/species/SpeciesLocationMap';
 
 const taxonLabels = {
   aves: 'Aves',
@@ -193,6 +194,13 @@ export default function SpeciesDetail() {
               </div>
             )}
           </div>
+
+          <SpeciesLocationMap
+            latitude={species.recording_latitude}
+            longitude={species.recording_longitude}
+            locationName={species.recording_location}
+            speciesName={species.common_name}
+          />
         </div>
       </div>
     </div>
