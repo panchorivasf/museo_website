@@ -108,7 +108,7 @@ export default function SpeciesDetail() {
             <div className="bg-card rounded-xl border border-border p-6">
               <h3 className="font-heading font-semibold text-primary flex items-center gap-2 mb-3">
                 <Info className="w-4 h-4 text-secondary" />
-                Descripción del Sonido
+                Sobre este sonido
               </h3>
               <ReactMarkdown className="text-muted-foreground leading-relaxed prose prose-sm max-w-none prose-p:my-1">
                 {species.sound_description}
@@ -193,14 +193,13 @@ export default function SpeciesDetail() {
                 Rango: {species.frequency_range}
               </div>
             )}
+            <SpeciesLocationMap
+              latitude={species.recording_latitude}
+              longitude={species.recording_longitude}
+              locationName={species.recording_location}
+              speciesName={species.common_name}
+            />
           </div>
-
-          <SpeciesLocationMap
-            latitude={species.recording_latitude}
-            longitude={species.recording_longitude}
-            locationName={species.recording_location}
-            speciesName={species.common_name}
-          />
         </div>
       </div>
     </div>
