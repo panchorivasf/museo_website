@@ -94,10 +94,15 @@ export default function BiophonyMap() {
     queryFn: async () => {
       const { data } = await supabase
         .from('map_recordings')
-        .select('*')
+        .select('*, species(common_name, scientific_name, taxon)')
         .order('created_at', { ascending: false })
         .limit(500);
-      return data || [];
+      return (data || []).map(r => ({
+        ...r,
+        species_name: r.species?.common_name || '',
+        scientific_name: r.species?.scientific_name || '',
+        taxon: r.species?.taxon || '',
+      }));
     },
   });
 

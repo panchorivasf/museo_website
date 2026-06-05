@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/api/supabaseClient';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,14 +8,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { X, Upload, Loader2, Map } from 'lucide-react';
 import LocationPicker from './LocationPicker';
-
-const taxonOptions = [
-  { value: 'aves', label: 'Aves' },
-  { value: 'insectos', label: 'Insectos' },
-  { value: 'anfibios', label: 'Anfibios' },
-  { value: 'mamiferos_marinos', label: 'Mamíferos Marinos' },
-  { value: 'mamiferos_terrestres', label: 'Mamíferos Terrestres' },
-];
 
 async function uploadFile(file) {
   const ext = file.name.split('.').pop();
@@ -33,9 +25,7 @@ export default function RecordingForm({ recording, onClose }) {
   const [showMap, setShowMap] = useState(false);
 
   const [form, setForm] = useState({
-    species_name: recording?.species_name || '',
-    scientific_name: recording?.scientific_name || '',
-    taxon: recording?.taxon || 'aves',
+    species_id: recording?.species_id || '',
     latitude: recording?.latitude || '',
     longitude: recording?.longitude || '',
     location_name: recording?.location_name || '',
@@ -46,10 +36,22 @@ export default function RecordingForm({ recording, onClose }) {
     elevation: recording?.elevation || '',
   });
 
+  const { data: speciesList = [] } = useQuery({
+    queryKey: ['species-list'],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('species')
+        .select('id, common_name, scientific_name, taxon')
+        .order('common_name');
+      return data || [];
+    },
+  });
+
   const mutation = useMutation({
     mutationFn: async (data) => {
       const payload = {
         ...data,
+        species_id: data.species_id || null,
         latitude: parseFloat(data.latitude) || 0,
         longitude: parseFloat(data.longitude) || 0,
         elevation: data.elevation ? parseFloat(data.elevation) : null,
@@ -90,6 +92,8 @@ export default function RecordingForm({ recording, onClose }) {
     mutation.mutate(form);
   };
 
+  const selectedSpecies = speciesList.find(s => s.id === form.species_id);
+
   return (
     <div className="bg-card rounded-xl border border-border p-6 mb-6">
       <div className="flex items-center justify-between mb-5">
@@ -102,28 +106,26 @@ export default function RecordingForm({ recording, onClose }) {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-5">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="space-y-1.5">
-            <Label>Nombre de especie *</Label>
-            <Input value={form.species_name} onChange={e => update('species_name', e.target.value)} required />
-          </div>
-          <div className="space-y-1.5">
-            <Label>Nombre científico</Label>
-            <Input value={form.scientific_name} onChange={e => update('scientific_name', e.target.value)} className="italic" />
-          </div>
-          <div className="space-y-1.5">
-            <Label>Taxón *</Label>
-            <Select value={form.taxon} onValueChange={v => update('taxon', v)}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {taxonOptions.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-1.5">
-            <Label>Nombre del lugar</Label>
-            <Input value={form.location_name} onChange={e => update('location_name', e.target.value)} />
-          </div>
+        <div className="space-y-1.5">
+          <Label>Especie *</Label>
+          <Select value={form.species_id} onValueChange={v => update('species_id', v)} required>
+            <SelectTrigger>
+              <SelectValue placeholder="Seleccionar especie..." />
+            </SelectTrigger>
+            <SelectContent>
+              {speciesList.map(s => (
+                <SelectItem key={s.id} value={s.id}>
+                  {s.common_name}
+                  {s.scientific_name && <span className="text-muted-foreground italic ml-1 text-xs">— {s.scientific_name}</span>}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {selectedSpecies && (
+            <p className="text-xs text-muted-foreground">
+              Taxón: <span className="font-medium">{selectedSpecies.taxon}</span>
+            </p>
+          )}
         </div>
 
         <div className="space-y-3">
@@ -161,6 +163,11 @@ export default function RecordingForm({ recording, onClose }) {
               }}
             />
           )}
+        </div>
+
+        <div className="space-y-1.5">
+          <Label>Nombre del lugar</Label>
+          <Input value={form.location_name} onChange={e => update('location_name', e.target.value)} />
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

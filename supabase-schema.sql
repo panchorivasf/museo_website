@@ -26,9 +26,7 @@ create table if not exists species (
 -- Map recordings table
 create table if not exists map_recordings (
   id uuid primary key default gen_random_uuid(),
-  species_name text not null,
-  scientific_name text,
-  taxon text not null,
+  species_id uuid references species(id) on delete set null,
   latitude numeric not null,
   longitude numeric not null,
   location_name text,
