@@ -35,16 +35,19 @@ export const AuthProvider = ({ children }) => {
         } catch {
           // if the check fails, still allow the session
         }
+
+        if (session?.user?.user_metadata?.invited_at) {
+          window.location.href = '/reset-password';
+        }
+      }
+
+      if (event === 'PASSWORD_RECOVERY') {
+        window.location.href = '/reset-password';
       }
 
       setUser(session?.user ?? null);
       setIsAuthenticated(!!session?.user);
       setIsLoadingAuth(false);
-
-      if (event === 'PASSWORD_RECOVERY' ||
-          (event === 'SIGNED_IN' && session?.user?.user_metadata?.invited_at)) {
-        window.location.href = '/reset-password';
-      }
     });
 
     return () => subscription.unsubscribe();
