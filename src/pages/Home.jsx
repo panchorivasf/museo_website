@@ -39,13 +39,24 @@ export default function Home() {
     <div>
       {/* Hero */}
       <section className="relative min-h-[85vh] flex items-center overflow-hidden">
-        <div className="absolute inset-0">
-          <img
-            src="/images/hero-1.jpg"
-            alt="Ondas de sonido bioacústicas"
-            className="w-full h-full object-cover"
-          />
-          <div className="absolute inset-0 bg-gradient-to-r from-primary/90 via-primary/70 to-primary/40" />
+        <div className="absolute inset-0 bg-gradient-to-br from-[#062a2e] via-[#0a3d35] to-[#1a5c40]">
+          {/* Subtle waveform lines */}
+          <svg className="absolute inset-0 w-full h-full opacity-10" preserveAspectRatio="none" viewBox="0 0 1440 600" xmlns="http://www.w3.org/2000/svg">
+            {[0,1,2,3,4,5,6,7,8].map(i => (
+              <path
+                key={i}
+                d={`M0,${300 + Math.sin(i) * 80} ${Array.from({length: 24}, (_, j) => {
+                  const x = (j + 1) * 60;
+                  const y = 300 + Math.sin((j + i) * 0.7) * (40 + i * 10);
+                  return `L${x},${y}`;
+                }).join(' ')} L1440,${300 + Math.sin(i + 24) * 80}`}
+                fill="none"
+                stroke="#5AAA95"
+                strokeWidth="1.5"
+              />
+            ))}
+          </svg>
+          <div className="absolute inset-0 bg-gradient-to-r from-black/40 via-transparent to-transparent" />
         </div>
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
           <motion.div
