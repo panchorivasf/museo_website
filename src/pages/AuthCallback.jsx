@@ -5,16 +5,19 @@ export default function AuthCallback() {
   useEffect(() => {
     const check = async () => {
       const { data: { session } } = await supabase.auth.getSession();
+      console.log('session user:', session?.user?.email);
       if (!session?.user) {
         window.location.href = '/login';
         return;
       }
 
-      const { data: allowed } = await supabase
+      const { data: allowed, error } = await supabase
         .from('allowed_admins')
         .select('email')
         .eq('email', session.user.email)
         .maybeSingle();
+
+      console.log('allowed:', allowed, 'error:', error);
 
       if (!allowed) {
         await supabase.auth.signOut();
