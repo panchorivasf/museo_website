@@ -1,39 +1,55 @@
-**Welcome to your Base44 project** 
+# Museo Bioacústico — Sitio Web
 
-**About**
+A web application for exploring and cataloging bioacoustic recordings of wildlife species. Built with React, Vite, Tailwind CSS, and Supabase.
 
-View and Edit  your app on [Base44.com](http://Base44.com) 
+## Features
 
-This project contains everything you need to run your app locally.
+- Species catalog with taxonomic filtering
+- Audio playback with spectrogram visualization
+- Interactive biophony map
+- Admin panel for managing species and recordings
+- Authentication (login, register, password reset)
 
-**Edit the code in your local development environment**
+## Prerequisites
 
-Any change pushed to the repo will also be reflected in the Base44 Builder.
+- Node.js 18+
+- A [Supabase](https://supabase.com) project
 
-**Prerequisites:** 
+## Getting Started
 
-1. Clone the repository using the project's Git URL 
-2. Navigate to the project directory
-3. Install dependencies: `npm install`
-4. Create an `.env.local` file and set the right environment variables
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/panchorivasf/museo_website.git
+   cd museo_website
+   ```
 
-```
-VITE_BASE44_APP_ID=your_app_id
-VITE_BASE44_APP_BASE_URL=your_backend_url
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
 
-e.g.
-VITE_BASE44_APP_ID=cbef744a8545c389ef439ea6
-VITE_BASE44_APP_BASE_URL=https://my-to-do-list-81bfaad7.base44.app
-```
+3. Copy the example env file and fill in your Supabase credentials:
+   ```bash
+   cp .env.example .env.local
+   ```
 
-Run the app: `npm run dev`
+   Required variables:
+   ```
+   VITE_SUPABASE_URL=your_supabase_project_url
+   VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+   ```
 
-**Publish your changes**
+4. Run the development server:
+   ```bash
+   npm run dev
+   ```
 
-Open [Base44.com](http://Base44.com) and click on Publish.
+## Database
 
-**Docs & Support**
+The Supabase schema is defined in [supabase-schema.sql](supabase-schema.sql). Run it in your Supabase SQL editor to set up the required tables.
 
-Documentation: [https://docs.base44.com/Integrations/Using-GitHub](https://docs.base44.com/Integrations/Using-GitHub)
+## Tech Stack
 
-Support: [https://app.base44.com/support](https://app.base44.com/support)
+- [React](https://react.dev) + [Vite](https://vitejs.dev)
+- [Tailwind CSS](https://tailwindcss.com) + [shadcn/ui](https://ui.shadcn.com)
+- [Supabase](https://supabase.com) (database + auth)
