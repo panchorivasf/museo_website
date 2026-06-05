@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/api/supabaseClient';
 import { Button } from '@/components/ui/button';
@@ -100,6 +100,25 @@ export default function RecordingForm({ recording, onClose }) {
   };
 
   const update = (field, value) => setForm(prev => ({ ...prev, [field]: value }));
+
+  // Auto-fetch elevation when coordinates change
+  const elevationTimer = useRef(null);
+  useEffect(() => {
+    const lat = parseFloat(form.latitude);
+    const lng = parseFloat(form.longitude);
+    if (!lat || !lng || isNaN(lat) || isNaN(lng)) return;
+    clearTimeout(elevationTimer.current);
+    elevationTimer.current = setTimeout(async () => {
+      try {
+        const res = await fetch(`https://api.open-meteo.com/v1/elevation?latitude=${lat}&longitude=${lng}`);
+        const data = await res.json();
+        if (data.elevation?.[0] != null) {
+          setForm(prev => ({ ...prev, elevation: Math.round(data.elevation[0]) }));
+        }
+      } catch {}
+    }, 600);
+    return () => clearTimeout(elevationTimer.current);
+  }, [form.latitude, form.longitude]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
