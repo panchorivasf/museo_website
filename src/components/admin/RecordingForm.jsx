@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { X, Upload, Loader2, Map } from 'lucide-react';
+import RecordistSelect from './RecordistSelect';
 import LocationPicker from './LocationPicker';
 
 async function uploadFile(file) {
@@ -188,10 +189,7 @@ export default function RecordingForm({ recording, onClose }) {
             <Label>Fecha de grabación</Label>
             <Input type="date" value={form.recording_date} onChange={e => update('recording_date', e.target.value)} />
           </div>
-          <div className="space-y-1.5">
-            <Label>Grabador(a)</Label>
-            <Input value={form.recordist} onChange={e => update('recordist', e.target.value)} />
-          </div>
+          <RecordistSelect value={form.recordist} onChange={v => update('recordist', v)} />
         </div>
 
         <div className="space-y-1.5">

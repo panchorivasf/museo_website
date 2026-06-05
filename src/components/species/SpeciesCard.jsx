@@ -7,7 +7,9 @@ const taxonLabels = {
   aves: 'Aves',
   insectos: 'Insectos',
   anfibios: 'Anfibios',
-  mamiferos_marinos: 'Mamíferos Marinos',
+  cetaceos: 'Cetáceos',
+  focas: 'Focas',
+  nutrias: 'Nutrias',
   mamiferos_terrestres: 'Mamíferos Terrestres',
 };
 
@@ -15,7 +17,9 @@ const taxonColors = {
   aves: 'bg-teal text-teal-foreground',
   insectos: 'bg-accent text-accent-foreground',
   anfibios: 'bg-secondary text-secondary-foreground',
-  mamiferos_marinos: 'bg-primary text-primary-foreground',
+  cetaceos: 'bg-primary text-primary-foreground',
+  focas: 'bg-primary text-primary-foreground',
+  nutrias: 'bg-primary text-primary-foreground',
   mamiferos_terrestres: 'bg-ocher text-ocher-foreground',
 };
 

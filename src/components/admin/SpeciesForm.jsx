@@ -9,12 +9,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { X, Upload, Loader2, Map } from 'lucide-react';
 import LocationPicker from './LocationPicker';
+import RecordistSelect from './RecordistSelect';
 
 const taxonOptions = [
   { value: 'aves', label: 'Aves' },
   { value: 'insectos', label: 'Insectos' },
   { value: 'anfibios', label: 'Anfibios' },
-  { value: 'mamiferos_marinos', label: 'Mamíferos Marinos' },
+  { value: 'cetaceos', label: 'Cetáceos' },
+  { value: 'focas', label: 'Focas' },
+  { value: 'nutrias', label: 'Nutrias' },
   { value: 'mamiferos_terrestres', label: 'Mamíferos Terrestres' },
 ];
 
@@ -258,10 +261,7 @@ export default function SpeciesForm({ species, onClose }) {
             <Label>Fecha de grabación</Label>
             <Input type="date" value={form.recording_date} onChange={e => update('recording_date', e.target.value)} />
           </div>
-          <div className="space-y-1.5">
-            <Label>Grabador(a)</Label>
-            <Input value={form.recordist} onChange={e => update('recordist', e.target.value)} />
-          </div>
+          <RecordistSelect value={form.recordist} onChange={v => update('recordist', v)} />
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

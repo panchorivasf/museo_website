@@ -12,7 +12,7 @@ import {
 
 const taxonLabels = {
   aves: 'Aves', insectos: 'Insectos', anfibios: 'Anfibios',
-  mamiferos_marinos: 'M. Marinos', mamiferos_terrestres: 'M. Terrestres',
+  cetaceos: 'Cetáceos', focas: 'Focas', nutrias: 'Nutrias', mamiferos_terrestres: 'M. Terrestres',
 };
 
 export default function AdminRecordings() {

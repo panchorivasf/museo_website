@@ -14,7 +14,9 @@ const taxonConfig = {
   aves: { label: 'Aves', icon: Bird, color: '#087F8C' },
   insectos: { label: 'Insectos', icon: Bug, color: '#86A873' },
   anfibios: { label: 'Anfibios', icon: Waves, color: '#5AAA95' },
-  mamiferos_marinos: { label: 'M. Marinos', icon: Waves, color: '#095256' },
+  cetaceos: { label: 'Cetáceos', icon: Waves, color: '#095256' },
+  focas: { label: 'Focas', icon: Waves, color: '#2E6B8A' },
+  nutrias: { label: 'Nutrias', icon: Waves, color: '#4A7C6F' },
   mamiferos_terrestres: { label: 'M. Terrestres', icon: TreePine, color: '#BB9F06' },
 };
 

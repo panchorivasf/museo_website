@@ -13,7 +13,9 @@ const taxonLabels = {
   aves: 'Aves',
   insectos: 'Insectos',
   anfibios: 'Anfibios',
-  mamiferos_marinos: 'Mamíferos Marinos',
+  cetaceos: 'Cetáceos',
+  focas: 'Focas',
+  nutrias: 'Nutrias',
   mamiferos_terrestres: 'Mamíferos Terrestres',
 };
 
