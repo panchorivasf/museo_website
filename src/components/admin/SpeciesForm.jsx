@@ -59,6 +59,8 @@ export default function SpeciesForm({ species, onClose }) {
     image_url: species?.image_url || '',
     habitat: species?.habitat || '',
     frequency_range: species?.frequency_range || '',
+    frequency_min: species?.frequency_min || '',
+    frequency_max: species?.frequency_max || '',
     recording_location: species?.recording_location || '',
     recording_latitude: species?.recording_latitude || '',
     recording_longitude: species?.recording_longitude || '',
@@ -241,8 +243,12 @@ export default function SpeciesForm({ species, onClose }) {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="space-y-1.5">
-            <Label>Rango de frecuencias</Label>
-            <Input value={form.frequency_range} onChange={e => update('frequency_range', e.target.value)} placeholder="ej: 2-8 kHz" />
+            <Label>Frecuencia mín. (kHz)</Label>
+            <Input type="number" step="0.1" min="0" value={form.frequency_min} onChange={e => update('frequency_min', e.target.value)} placeholder="ej: 2" />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Frecuencia máx. (kHz)</Label>
+            <Input type="number" step="0.1" min="0" value={form.frequency_max} onChange={e => update('frequency_max', e.target.value)} placeholder="ej: 8" />
           </div>
           <div className="space-y-1.5">
             <Label>Lugar de grabación</Label>

@@ -54,9 +54,11 @@ export default function SpeciesCard({ species }) {
           <p className="text-sm italic text-muted-foreground mt-0.5">
             {species.scientific_name}
           </p>
-          {species.frequency_range && (
+          {(species.frequency_min || species.frequency_max) && (
             <p className="text-xs font-mono text-muted-foreground/70 mt-2">
-              {species.frequency_range}
+              {species.frequency_min && species.frequency_max
+                ? `${species.frequency_min}–${species.frequency_max} kHz`
+                : `${species.frequency_min || species.frequency_max} kHz`}
             </p>
           )}
         </div>

@@ -106,10 +106,19 @@ export default function SpeciesDetail() {
 
           {species.sound_description && (
             <div className="bg-card rounded-xl border border-border p-6">
-              <h3 className="font-heading font-semibold text-primary flex items-center gap-2 mb-3">
-                <Info className="w-4 h-4 text-secondary" />
-                Sobre este sonido
-              </h3>
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-heading font-semibold text-primary flex items-center gap-2">
+                  <Info className="w-4 h-4 text-secondary" />
+                  Sobre este sonido
+                </h3>
+                {(species.frequency_min || species.frequency_max) && (
+                  <span className="text-xs font-mono text-muted-foreground bg-muted px-2 py-0.5 rounded">
+                    {species.frequency_min && species.frequency_max
+                      ? `${species.frequency_min}–${species.frequency_max} kHz`
+                      : `${species.frequency_min || species.frequency_max} kHz`}
+                  </span>
+                )}
+              </div>
               <ReactMarkdown className="text-muted-foreground leading-relaxed prose prose-sm max-w-none prose-p:my-1">
                 {species.sound_description}
               </ReactMarkdown>
@@ -186,11 +195,6 @@ export default function SpeciesDetail() {
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <User className="w-3.5 h-3.5 text-secondary shrink-0" />
                 {species.recordist}
-              </div>
-            )}
-            {species.frequency_range && (
-              <div className="text-xs font-mono text-muted-foreground/70 mt-2">
-                Rango: {species.frequency_range}
               </div>
             )}
             <SpeciesLocationMap
