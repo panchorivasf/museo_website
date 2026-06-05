@@ -15,10 +15,14 @@ export const AuthProvider = ({ children }) => {
       setIsLoadingAuth(false);
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setUser(session?.user ?? null);
       setIsAuthenticated(!!session?.user);
       setIsLoadingAuth(false);
+      if (event === 'PASSWORD_RECOVERY' || event === 'USER_UPDATED' ||
+          (event === 'SIGNED_IN' && session?.user?.user_metadata?.invited_at)) {
+        window.location.href = '/reset-password';
+      }
     });
 
     return () => subscription.unsubscribe();
