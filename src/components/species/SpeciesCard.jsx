@@ -8,9 +8,7 @@ const taxonLabels = {
   insectos: 'Insectos',
   anfibios: 'Anfibios',
   cetaceos: 'Cetáceos',
-  focas: 'Focas',
-  nutrias: 'Nutrias',
-  mamiferos_terrestres: 'Mamíferos Terrestres',
+  mamiferos_terrestres: 'Roedores',
 };
 
 const taxonColors = {
@@ -18,8 +16,6 @@ const taxonColors = {
   insectos: 'bg-accent text-accent-foreground',
   anfibios: 'bg-secondary text-secondary-foreground',
   cetaceos: 'bg-primary text-primary-foreground',
-  focas: 'bg-primary text-primary-foreground',
-  nutrias: 'bg-primary text-primary-foreground',
   mamiferos_terrestres: 'bg-ocher text-ocher-foreground',
 };
 

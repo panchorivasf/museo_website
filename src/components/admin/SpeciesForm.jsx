@@ -16,9 +16,7 @@ const taxonOptions = [
   { value: 'insectos', label: 'Insectos' },
   { value: 'anfibios', label: 'Anfibios' },
   { value: 'cetaceos', label: 'Cetáceos' },
-  { value: 'focas', label: 'Focas' },
-  { value: 'nutrias', label: 'Nutrias' },
-  { value: 'mamiferos_terrestres', label: 'Mamíferos Terrestres' },
+  { value: 'mamiferos_terrestres', label: 'Roedores' },
 ];
 
 const conservationOptions = [

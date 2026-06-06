@@ -14,9 +14,7 @@ const taxonLabels = {
   insectos: 'Insectos',
   anfibios: 'Anfibios',
   cetaceos: 'Cetáceos',
-  focas: 'Focas',
-  nutrias: 'Nutrias',
-  mamiferos_terrestres: 'Mamíferos Terrestres',
+  mamiferos_terrestres: 'Roedores',
 };
 
 const conservationLabels = {
