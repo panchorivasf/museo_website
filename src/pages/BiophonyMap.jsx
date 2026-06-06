@@ -22,11 +22,9 @@ const taxonConfig = {
 function createIcon(color) {
   return L.divIcon({
     className: '',
-    html: `<div style="width:28px;height:28px;border-radius:50%;background:${color};border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;">
-      <div style="width:8px;height:8px;border-radius:50%;background:white;"></div>
-    </div>`,
-    iconSize: [28, 28],
-    iconAnchor: [14, 14],
+    html: `<div style="width:16px;height:16px;border-radius:50%;background:${color};border:2px solid white;box-shadow:0 1px 5px rgba(0,0,0,0.35);"></div>`,
+    iconSize: [16, 16],
+    iconAnchor: [8, 8],
   });
 }
 
@@ -154,12 +152,12 @@ export default function BiophonyMap() {
         <TileLayer key={tileUrl} attribution={tileAttribution} url={tileUrl} />
         <MapBounds recordings={filteredRecordings} />
         <MarkerClusterGroup
-          chunkedLoading spiderfyOnEveryZoom={false} showCoverageOnHover={false}
-          zoomToBoundsOnClick={false} spiderfyOnMaxZoom={true}
-          eventHandlers={{
-            clustermouseover: (e) => e.layer.spiderfy(),
-            clustermouseout: (e) => e.layer.unspiderfy(),
-          }}
+          chunkedLoading
+          showCoverageOnHover={false}
+          maxClusterRadius={40}
+          disableClusteringAtZoom={10}
+          spiderfyOnMaxZoom={true}
+          zoomToBoundsOnClick={true}
         >
           {filteredRecordings.map(rec => {
             const config = taxonConfig[rec.taxon] || { color: '#5AAA95' };
