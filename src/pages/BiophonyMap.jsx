@@ -6,7 +6,7 @@ import MarkerClusterGroup from 'react-leaflet-cluster';
 import L from 'leaflet';
 import { Bird, Bug, Rat } from 'lucide-react';
 import { WhaleTail, Frog } from '@/components/icons/TaxonIcons';
-import MiniSpectrogram from '@/components/audio/MiniSpectrogram';
+import MiniSpectrogram, { stopActiveMiniSpectrogram } from '@/components/audio/MiniSpectrogram';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useTheme } from '@/lib/ThemeContext';
@@ -40,11 +40,21 @@ function MapBounds({ recordings }) {
   return null;
 }
 
+function MapEvents() {
+  const map = useMap();
+  useEffect(() => {
+    const handler = () => stopActiveMiniSpectrogram();
+    map.on('popupclose', handler);
+    return () => map.off('popupclose', handler);
+  }, [map]);
+  return null;
+}
+
 function RecordingPopup({ recording }) {
   const config = taxonConfig[recording.taxon] || { label: recording.taxon, color: '#5AAA95' };
 
   return (
-    <div style={{ width: '260px', padding: '0' }}>
+    <div style={{ width: '260px', padding: '0' }} onClick={e => e.stopPropagation()}>
 
       {/* Row 1: image with taxon badge */}
       {recording.image_url && (
@@ -157,6 +167,7 @@ export default function BiophonyMap() {
       <MapContainer center={[-36.82, -73.05]} zoom={6} className="w-full h-full z-0" zoomControl={false}>
         <TileLayer key={tileUrl} attribution={tileAttribution} url={tileUrl} />
         <MapBounds recordings={filteredRecordings} />
+        <MapEvents />
         <MarkerClusterGroup
           chunkedLoading
           showCoverageOnHover={false}

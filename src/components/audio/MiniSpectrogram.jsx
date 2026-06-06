@@ -1,6 +1,12 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { Play, Pause } from 'lucide-react';
 
+// Module-level: only one mini spectrogram plays at a time
+let _stopActive = null;
+export function stopActiveMiniSpectrogram() {
+  if (_stopActive) { _stopActive(); _stopActive = null; }
+}
+
 const VISIBLE_SECONDS = 2;
 const CANVAS_H = 72;
 
@@ -122,6 +128,7 @@ export default function MiniSpectrogram({ audioUrl, frequencyMin, frequencyMax }
   const [loading, setLoading] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [playing, setPlaying] = useState(false);
+  const pauseRef = useRef(null); // stable ref to current pause fn, for module-level stop
 
   const renderAt = useCallback((t) => {
     const canvas = canvasRef.current;
@@ -222,8 +229,10 @@ export default function MiniSpectrogram({ audioUrl, frequencyMin, frequencyMax }
     };
 
     setPlaying(true);
+    // Register as the active mini so BiophonyMap can stop it on popup close
+    _stopActive = () => { pause(); };
     animRef.current = requestAnimationFrame(drawFrame);
-  }, [loadAudio, stopSource, drawFrame, renderAt]);
+  }, [loadAudio, stopSource, drawFrame, renderAt, pause]);
 
   const pause = useCallback(() => {
     if (audioCtxRef.current && startTimeRef.current > 0) {
@@ -234,6 +243,7 @@ export default function MiniSpectrogram({ audioUrl, frequencyMin, frequencyMax }
     }
     stopSource(false);
     setPlaying(false);
+    _stopActive = null;
   }, [stopSource]);
 
   useEffect(() => { loadAudio(); }, [audioUrl]);
@@ -242,6 +252,7 @@ export default function MiniSpectrogram({ audioUrl, frequencyMin, frequencyMax }
     cancelAnimationFrame(animRef.current);
     if (sourceRef.current) { try { sourceRef.current.stop(); } catch {} }
     if (audioCtxRef.current) audioCtxRef.current.close();
+    _stopActive = null;
   }, []);
 
   return (
