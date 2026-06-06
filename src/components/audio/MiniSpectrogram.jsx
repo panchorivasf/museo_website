@@ -1,4 +1,7 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState, useCallback } from 'react';
+import { Play, Pause } from 'lucide-react';
+
+const VISIBLE_SECONDS = 2;
 
 function fftInPlace(re, im) {
   const N = re.length;
@@ -48,93 +51,234 @@ function valueToColor(v) {
   return [Math.round((r + m) * 255), Math.round((g + m) * 255), Math.round((b + m) * 255)];
 }
 
-export default function MiniSpectrogram({ audioUrl }) {
+function buildOffscreen(audioBuffer, canvasW, canvasH, freqMinHz, freqMaxHz) {
+  const fftSize = 512;
+  const hopSize = Math.floor(fftSize / 4);
+  const numBins = fftSize / 2;
+  const nyquist = audioBuffer.sampleRate / 2;
+  const channelData = audioBuffer.getChannelData(0);
+  const numFrames = Math.floor((channelData.length - fftSize) / hopSize);
+  const re = new Float32Array(fftSize);
+  const im = new Float32Array(fftSize);
+
+  const frames = [];
+  for (let f = 0; f < numFrames; f++) {
+    const start = f * hopSize;
+    for (let i = 0; i < fftSize; i++) {
+      const hann = 0.5 * (1 - Math.cos((2 * Math.PI * i) / (fftSize - 1)));
+      re[i] = (channelData[start + i] || 0) * hann;
+      im[i] = 0;
+    }
+    fftInPlace(re, im);
+    const mags = new Uint8Array(numBins);
+    for (let b = 0; b < numBins; b++) {
+      const mag = Math.sqrt(re[b] * re[b] + im[b] * im[b]) / fftSize;
+      const db = Math.max(-80, 20 * Math.log10(mag + 1e-9));
+      mags[b] = Math.round(((db + 80) / 80) * 255);
+    }
+    frames.push(mags);
+  }
+
+  // Frequency bin range
+  const minBin = freqMinHz ? Math.max(0, Math.floor((freqMinHz / nyquist) * numBins)) : 0;
+  const maxBin = freqMaxHz ? Math.min(numBins, Math.ceil((freqMaxHz / nyquist) * numBins)) : numBins;
+
+  const duration = audioBuffer.duration;
+  const zoomFactor = duration > VISIBLE_SECONDS ? duration / VISIBLE_SECONDS : 1;
+  const offW = Math.round(canvasW * zoomFactor);
+
+  const offscreen = document.createElement('canvas');
+  offscreen.width = offW;
+  offscreen.height = canvasH;
+  const ctx = offscreen.getContext('2d');
+  const imageData = ctx.createImageData(offW, canvasH);
+  const data = imageData.data;
+
+  for (let col = 0; col < offW; col++) {
+    const frameIdx = Math.floor((col / offW) * frames.length);
+    const frame = frames[Math.min(frameIdx, frames.length - 1)];
+    for (let row = 0; row < canvasH; row++) {
+      // Map row to the restricted freq range (bottom = minBin, top = maxBin)
+      const binIdx = minBin + Math.floor(((canvasH - 1 - row) / canvasH) * (maxBin - minBin));
+      const v = frame[Math.min(binIdx, numBins - 1)];
+      const [r, g, b] = valueToColor(v);
+      const idx = (row * offW + col) * 4;
+      data[idx] = r; data[idx + 1] = g; data[idx + 2] = b; data[idx + 3] = 255;
+    }
+  }
+  ctx.putImageData(imageData, 0, 0);
+  return offscreen;
+}
+
+export default function MiniSpectrogram({ audioUrl, frequencyMin, frequencyMax }) {
   const canvasRef = useRef(null);
+  const offscreenRef = useRef(null);
+  const audioCtxRef = useRef(null);
+  const sourceRef = useRef(null);
+  const audioBufferRef = useRef(null);
+  const animRef = useRef(null);
+  const startTimeRef = useRef(0);
+  const pauseOffsetRef = useRef(0);
+
   const [loading, setLoading] = useState(false);
-  const [done, setDone] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+  const [playing, setPlaying] = useState(false);
+
+  const CANVAS_H = 44;
+
+  const renderAt = useCallback((t) => {
+    const canvas = canvasRef.current;
+    const offscreen = offscreenRef.current;
+    if (!canvas || !offscreen) return;
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width;
+    const H = canvas.height;
+    const dur = audioBufferRef.current?.duration || 0;
+    const offW = offscreen.width;
+    const centerX = W / 2;
+    const playheadOff = dur > 0 ? (t / dur) * offW : 0;
+
+    let srcX, playheadScreen;
+    if (playheadOff <= centerX) {
+      srcX = 0; playheadScreen = playheadOff;
+    } else if (playheadOff >= offW - centerX) {
+      srcX = offW - W; playheadScreen = playheadOff - srcX;
+    } else {
+      srcX = playheadOff - centerX; playheadScreen = centerX;
+    }
+
+    ctx.clearRect(0, 0, W, H);
+    ctx.drawImage(offscreen, srcX, 0, W, H, 0, 0, W, H);
+    ctx.strokeStyle = '#BB9F06';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(playheadScreen, 0);
+    ctx.lineTo(playheadScreen, H);
+    ctx.stroke();
+  }, []);
+
+  const stopSource = useCallback((resetOffset = true) => {
+    if (sourceRef.current) {
+      sourceRef.current.onended = null;
+      try { sourceRef.current.stop(); } catch {}
+      sourceRef.current.disconnect();
+      sourceRef.current = null;
+    }
+    cancelAnimationFrame(animRef.current);
+    if (resetOffset) pauseOffsetRef.current = 0;
+  }, []);
+
+  const loadAudio = useCallback(async () => {
+    if (loaded || loading || !audioUrl) return;
+    setLoading(true);
+    try {
+      const res = await fetch(audioUrl);
+      const buf = await res.arrayBuffer();
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      audioCtxRef.current = ctx;
+      const audio = await ctx.decodeAudioData(buf);
+      audioBufferRef.current = audio;
+
+      const canvas = canvasRef.current;
+      const dpr = window.devicePixelRatio || 1;
+      const W = canvas ? canvas.offsetWidth * dpr : 240;
+      const H = CANVAS_H * dpr;
+      if (canvas) { canvas.width = W; canvas.height = H; }
+
+      const freqMinHz = frequencyMin ? frequencyMin * 1000 : null;
+      const freqMaxHz = frequencyMax ? frequencyMax * 1000 : null;
+      offscreenRef.current = buildOffscreen(audio, W, H, freqMinHz, freqMaxHz);
+
+      setLoaded(true);
+      renderAt(0);
+    } catch {}
+    setLoading(false);
+  }, [audioUrl, frequencyMin, frequencyMax, loaded, loading, renderAt]);
+
+  const drawFrame = useCallback(() => {
+    const dur = audioBufferRef.current?.duration || 0;
+    if (dur > 0 && audioCtxRef.current && startTimeRef.current > 0) {
+      const elapsed = audioCtxRef.current.currentTime - startTimeRef.current;
+      const t = Math.min(pauseOffsetRef.current + elapsed, dur);
+      renderAt(t);
+    }
+    animRef.current = requestAnimationFrame(drawFrame);
+  }, [renderAt]);
+
+  const play = useCallback(async () => {
+    await loadAudio();
+    const ctx = audioCtxRef.current;
+    const buffer = audioBufferRef.current;
+    if (!ctx || !buffer) return;
+    if (ctx.state === 'suspended') await ctx.resume();
+    stopSource(false);
+
+    const source = ctx.createBufferSource();
+    source.buffer = buffer;
+    source.connect(ctx.destination);
+    sourceRef.current = source;
+    startTimeRef.current = ctx.currentTime;
+    source.start(0, pauseOffsetRef.current);
+
+    source.onended = () => {
+      cancelAnimationFrame(animRef.current);
+      pauseOffsetRef.current = 0;
+      startTimeRef.current = 0;
+      setPlaying(false);
+      renderAt(0);
+    };
+
+    setPlaying(true);
+    animRef.current = requestAnimationFrame(drawFrame);
+  }, [loadAudio, stopSource, drawFrame, renderAt]);
+
+  const pause = useCallback(() => {
+    if (audioCtxRef.current && startTimeRef.current > 0) {
+      const elapsed = audioCtxRef.current.currentTime - startTimeRef.current;
+      pauseOffsetRef.current = Math.min(pauseOffsetRef.current + elapsed, audioBufferRef.current?.duration || 0);
+    }
+    stopSource(false);
+    setPlaying(false);
+  }, [stopSource]);
+
+  // Preload spectrogram on mount
+  useEffect(() => { loadAudio(); }, [audioUrl]);
 
   useEffect(() => {
-    if (!audioUrl || done) return;
-    let cancelled = false;
-    setLoading(true);
+    return () => {
+      cancelAnimationFrame(animRef.current);
+      if (sourceRef.current) { try { sourceRef.current.stop(); } catch {} }
+      if (audioCtxRef.current) audioCtxRef.current.close();
+    };
+  }, []);
 
-    (async () => {
-      try {
-        const res = await fetch(audioUrl);
-        const buf = await res.arrayBuffer();
-        const ctx = new (window.AudioContext || window.webkitAudioContext)();
-        const audio = await ctx.decodeAudioData(buf);
-        ctx.close();
-        if (cancelled) return;
-
-        const canvas = canvasRef.current;
-        if (!canvas) return;
-        const W = canvas.width;
-        const H = canvas.height;
-
-        const fftSize = 512;
-        const hopSize = Math.floor(fftSize / 4);
-        const numBins = fftSize / 2;
-        const channelData = audio.getChannelData(0);
-        const numFrames = Math.floor((channelData.length - fftSize) / hopSize);
-        const re = new Float32Array(fftSize);
-        const im = new Float32Array(fftSize);
-        const frames = [];
-
-        for (let f = 0; f < numFrames; f++) {
-          const start = f * hopSize;
-          for (let i = 0; i < fftSize; i++) {
-            const hann = 0.5 * (1 - Math.cos((2 * Math.PI * i) / (fftSize - 1)));
-            re[i] = (channelData[start + i] || 0) * hann;
-            im[i] = 0;
-          }
-          fftInPlace(re, im);
-          const mags = new Uint8Array(numBins);
-          for (let b = 0; b < numBins; b++) {
-            const mag = Math.sqrt(re[b] * re[b] + im[b] * im[b]) / fftSize;
-            const db = Math.max(-80, 20 * Math.log10(mag + 1e-9));
-            mags[b] = Math.round(((db + 80) / 80) * 255);
-          }
-          frames.push(mags);
-        }
-
-        const c2d = canvas.getContext('2d');
-        const imageData = c2d.createImageData(W, H);
-        const data = imageData.data;
-        for (let col = 0; col < W; col++) {
-          const frameIdx = Math.floor((col / W) * frames.length);
-          const frame = frames[Math.min(frameIdx, frames.length - 1)];
-          for (let row = 0; row < H; row++) {
-            const binIdx = Math.floor(((H - 1 - row) / H) * numBins);
-            const v = frame[Math.min(binIdx, numBins - 1)];
-            const [r, g, b] = valueToColor(v);
-            const idx = (row * W + col) * 4;
-            data[idx] = r; data[idx + 1] = g; data[idx + 2] = b; data[idx + 3] = 255;
-          }
-        }
-        c2d.putImageData(imageData, 0, 0);
-        setDone(true);
-      } catch {}
-      if (!cancelled) setLoading(false);
-    })();
-
-    return () => { cancelled = true; };
-  }, [audioUrl]);
+  const toggle = () => playing ? pause() : play();
 
   return (
-    <div className="flex-1 relative rounded overflow-hidden bg-primary/80" style={{ height: '36px' }}>
-      <canvas
-        ref={canvasRef}
-        width={240}
-        height={36}
-        className="w-full h-full"
-        style={{ display: 'block' }}
-      />
-      {loading && (
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div className="w-3 h-3 border border-secondary border-t-transparent rounded-full animate-spin" />
-        </div>
-      )}
+    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+      <button
+        onClick={toggle}
+        style={{
+          display: 'flex', alignItems: 'center', gap: '3px',
+          fontSize: '11px', padding: '3px 8px', borderRadius: '4px',
+          border: '1px solid #ccc', background: 'white', cursor: 'pointer',
+          whiteSpace: 'nowrap', flexShrink: 0,
+        }}
+      >
+        {playing
+          ? <Pause style={{ width: '10px', height: '10px' }} />
+          : <Play style={{ width: '10px', height: '10px' }} />}
+        {playing ? 'Pausar' : 'Oír'}
+      </button>
+
+      <div style={{ flex: 1, position: 'relative', borderRadius: '4px', overflow: 'hidden', height: `${CANVAS_H}px`, background: '#062a2e' }}>
+        <canvas ref={canvasRef} style={{ display: 'block', width: '100%', height: '100%' }} />
+        {loading && (
+          <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ width: '12px', height: '12px', border: '2px solid #BB9F06', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
+          </div>
+        )}
+      </div>
     </div>
   );
 }

@@ -1,10 +1,10 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/api/supabaseClient';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import MarkerClusterGroup from 'react-leaflet-cluster';
 import L from 'leaflet';
-import { Bird, Bug, Rat, Play, Pause, ChevronDown, ChevronUp } from 'lucide-react';
+import { Bird, Bug, Rat, ChevronDown, ChevronUp } from 'lucide-react';
 import { WhaleTail, Frog } from '@/components/icons/TaxonIcons';
 import MiniSpectrogram from '@/components/audio/MiniSpectrogram';
 import { Button } from '@/components/ui/button';
@@ -41,16 +41,8 @@ function MapBounds({ recordings }) {
 }
 
 function RecordingPopup({ recording }) {
-  const [playing, setPlaying] = useState(false);
   const [descOpen, setDescOpen] = useState(false);
-  const audioRef = useRef(null);
   const config = taxonConfig[recording.taxon] || { label: recording.taxon, color: '#5AAA95' };
-
-  const togglePlay = () => {
-    if (!audioRef.current || !recording.audio_url) return;
-    if (playing) { audioRef.current.pause(); } else { audioRef.current.play(); }
-    setPlaying(!playing);
-  };
 
   return (
     <div style={{ minWidth: '220px', maxWidth: '280px', padding: '2px' }}>
@@ -97,19 +89,11 @@ function RecordingPopup({ recording }) {
       )}
 
       {recording.audio_url && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <button
-            onClick={togglePlay}
-            style={{ display: 'flex', alignItems: 'center', gap: '3px', fontSize: '11px', padding: '3px 8px', borderRadius: '4px', border: '1px solid #ccc', background: 'white', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}
-          >
-            {playing
-              ? <Pause style={{ width: '10px', height: '10px' }} />
-              : <Play style={{ width: '10px', height: '10px' }} />}
-            {playing ? 'Pausar' : 'Oír'}
-          </button>
-          <MiniSpectrogram audioUrl={recording.audio_url} />
-          <audio ref={audioRef} src={recording.audio_url} onEnded={() => setPlaying(false)} />
-        </div>
+        <MiniSpectrogram
+          audioUrl={recording.audio_url}
+          frequencyMin={recording.frequency_min}
+          frequencyMax={recording.frequency_max}
+        />
       )}
     </div>
   );
@@ -126,7 +110,7 @@ export default function BiophonyMap() {
     queryFn: async () => {
       const { data } = await supabase
         .from('map_recordings')
-        .select('*, species(common_name, scientific_name, taxon, image_url)')
+        .select('*, species(common_name, scientific_name, taxon, image_url, frequency_min, frequency_max)')
         .order('created_at', { ascending: false })
         .limit(500);
       return (data || []).map(r => ({
@@ -135,6 +119,8 @@ export default function BiophonyMap() {
         scientific_name: r.species?.scientific_name || '',
         taxon: r.species?.taxon || r.taxon || '',
         image_url: r.species?.image_url || null,
+        frequency_min: r.species?.frequency_min || null,
+        frequency_max: r.species?.frequency_max || null,
       }));
     },
   });
