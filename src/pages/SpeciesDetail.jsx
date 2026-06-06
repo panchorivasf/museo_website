@@ -84,7 +84,7 @@ export default function SpeciesDetail() {
               {species.image_author && (
                 <p className="text-xs text-muted-foreground mt-1.5 px-1">
                   {species.image_license && <span>{species.image_license} </span>}
-                  © {species.image_author}
+                  {!species.image_license?.startsWith('©') && '© '}{species.image_author}
                   {species.image_source_platform && species.image_source_url && (
                     <> · <a href={species.image_source_url} target="_blank" rel="noopener noreferrer" className="underline hover:text-primary">{species.image_source_platform}</a></>
                   )}
