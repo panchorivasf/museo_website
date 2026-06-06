@@ -19,9 +19,16 @@ const taxonColors = {
   mamiferos_terrestres: 'bg-ocher text-ocher-foreground',
 };
 
+function prefetchAudio(url) {
+  if (!url || prefetchAudio.seen?.has(url)) return;
+  (prefetchAudio.seen ??= new Set()).add(url);
+  fetch(url, { cache: 'force-cache', priority: 'low' }).catch(() => {});
+}
+
 export default function SpeciesCard({ species }) {
   return (
     <motion.div
+      onHoverStart={() => prefetchAudio(species.audio_url)}
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       whileHover={{ y: -4 }}

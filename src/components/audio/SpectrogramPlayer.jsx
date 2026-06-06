@@ -121,6 +121,8 @@ export default function SpectrogramPlayer({ audioUrl, altText }) {
   const startTimeRef = useRef(0);
   const pauseOffsetRef = useRef(0);
   const playbackRateRef = useRef(1);
+  const isPlayingRef = useRef(false);
+  const scrubbing = useRef(false);
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -282,6 +284,7 @@ export default function SpectrogramPlayer({ audioUrl, altText }) {
     };
 
     setIsPlaying(true);
+    isPlayingRef.current = true;
     animFrameRef.current = requestAnimationFrame(drawFrame);
   }, [loadAudio, playbackRate, volume, muted, stopSource, drawFrame, drawStatic]);
 
@@ -292,8 +295,44 @@ export default function SpectrogramPlayer({ audioUrl, altText }) {
     }
     stopSource(false);
     setIsPlaying(false);
+    isPlayingRef.current = false;
     drawStatic();
   }, [stopSource, drawStatic]);
+
+  const seekTo = useCallback((t) => {
+    const dur = audioBufferRef.current?.duration || 0;
+    pauseOffsetRef.current = Math.max(0, Math.min(t, dur));
+    setCurrentTime(pauseOffsetRef.current);
+    if (isPlayingRef.current) {
+      // restart from new position
+      const ctx = audioContextRef.current;
+      const buffer = audioBufferRef.current;
+      stopSource(false);
+      const source = ctx.createBufferSource();
+      source.buffer = buffer;
+      source.playbackRate.value = playbackRateRef.current;
+      const gain = ctx.createGain();
+      gain.gain.value = gainNodeRef.current?.gain.value ?? 0.8;
+      gainNodeRef.current = gain;
+      source.connect(gain);
+      gain.connect(ctx.destination);
+      sourceRef.current = source;
+      startTimeRef.current = ctx.currentTime;
+      source.start(0, pauseOffsetRef.current);
+      source.onended = () => {
+        cancelAnimationFrame(animFrameRef.current);
+        pauseOffsetRef.current = 0;
+        startTimeRef.current = 0;
+        setCurrentTime(0);
+        setIsPlaying(false);
+        isPlayingRef.current = false;
+        drawStatic();
+      };
+      animFrameRef.current = requestAnimationFrame(drawFrame);
+    } else {
+      drawStatic();
+    }
+  }, [stopSource, drawFrame, drawStatic]);
 
   const restart = useCallback(() => {
     pauseOffsetRef.current = 0;
@@ -343,10 +382,42 @@ export default function SpectrogramPlayer({ audioUrl, altText }) {
   const formatTime = (s) => `${Math.floor(s / 60)}:${Math.floor(s % 60).toString().padStart(2, '0')}`;
   const speedLabel = playbackRate < 1 ? `${playbackRate}× (−${Math.round((1 - playbackRate) * 100)}% freq)` : `${playbackRate}×`;
 
+  const handleCanvasClick = useCallback((e) => {
+    if (!offscreenRef.current || !audioBufferRef.current) return;
+    const canvas = canvasRef.current;
+    const rect = canvas.getBoundingClientRect();
+    const clickX = (e.clientX - rect.left) * (canvas.width / rect.width);
+    const W = canvas.width;
+    const offW = offscreenRef.current.width;
+    const dur = audioBufferRef.current.duration;
+    const centerX = W / 2;
+    const playheadOff = dur > 0 ? (pauseOffsetRef.current / dur) * offW : 0;
+    let srcX;
+    if (playheadOff <= centerX) srcX = 0;
+    else if (playheadOff >= offW - centerX) srcX = offW - W;
+    else srcX = playheadOff - centerX;
+    seekTo((srcX + clickX) / offW * dur);
+  }, [seekTo]);
+
+  const handleProgressPointer = useCallback((e) => {
+    if (!audioBufferRef.current) return;
+    const bar = e.currentTarget;
+    const seek = (clientX) => {
+      const rect = bar.getBoundingClientRect();
+      const frac = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+      seekTo(frac * audioBufferRef.current.duration);
+    };
+    seek(e.clientX);
+    const onMove = (mv) => seek(mv.clientX);
+    const onUp = () => { window.removeEventListener('pointermove', onMove); window.removeEventListener('pointerup', onUp); };
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+  }, [seekTo]);
+
   return (
     <div className="rounded-xl overflow-hidden bg-card border border-border shadow-lg" role="region" aria-label={altText || 'Reproductor de espectrograma'}>
       <div className="relative bg-primary/95 aspect-[3/1] min-h-[180px]">
-        <canvas ref={canvasRef} className="w-full h-full cursor-pointer" aria-label={altText || 'Espectrograma'} />
+        <canvas ref={canvasRef} onClick={handleCanvasClick} className="w-full h-full cursor-pointer" aria-label={altText || 'Espectrograma'} />
         {!isLoaded && !isLoading && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
             <p className="text-primary-foreground/60 text-sm font-body">Presiona reproducir para cargar el audio</p>
@@ -372,8 +443,11 @@ export default function SpectrogramPlayer({ audioUrl, altText }) {
           </Button>
           <div className="flex-1 flex items-center gap-2 text-xs font-mono text-muted-foreground">
             <span>{formatTime(currentTime)}</span>
-            <div className="flex-1 h-1 bg-muted rounded-full overflow-hidden">
-              <div className="h-full bg-secondary rounded-full transition-all" style={{ width: duration > 0 ? `${(currentTime / duration) * 100}%` : '0%' }} />
+            <div
+              className="flex-1 h-2 bg-muted rounded-full overflow-hidden cursor-pointer"
+              onPointerDown={handleProgressPointer}
+            >
+              <div className="h-full bg-secondary rounded-full" style={{ width: duration > 0 ? `${(currentTime / duration) * 100}%` : '0%' }} />
             </div>
             <span>{formatTime(duration)}</span>
           </div>
