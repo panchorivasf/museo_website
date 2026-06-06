@@ -1,14 +1,14 @@
 import React from 'react';
-import { Bird, Bug, Waves, TreePine } from 'lucide-react';
+import { Bird, Bug, Turtle, Fish, Rat } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 const taxa = [
   { key: 'all', label: 'Todos', icon: null },
   { key: 'aves', label: 'Aves', icon: Bird },
   { key: 'insectos', label: 'Insectos', icon: Bug },
-  { key: 'anfibios', label: 'Anfibios', icon: Waves },
-  { key: 'cetaceos', label: 'Cetáceos', icon: Waves },
-  { key: 'mamiferos_terrestres', label: 'Roedores', icon: TreePine },
+  { key: 'anfibios', label: 'Anfibios', icon: Turtle },
+  { key: 'cetaceos', label: 'Cetáceos', icon: Fish },
+  { key: 'mamiferos_terrestres', label: 'Roedores', icon: Rat },
 ];
 
 export default function TaxonFilter({ selected, onChange }) {
