@@ -51,8 +51,18 @@ function valueToColor(v) {
   return [Math.round((r + m) * 255), Math.round((g + m) * 255), Math.round((b + m) * 255)];
 }
 
+function pickFftSize(sampleRate, freqMinHz, freqMaxHz, canvasH) {
+  const nyquist = sampleRate / 2;
+  const rangeHz = (freqMaxHz ?? nyquist) - (freqMinHz ?? 0);
+  // We want enough bins so the visible freq range covers at least canvasH pixels
+  const needed = Math.ceil(canvasH * sampleRate / rangeHz);
+  let size = 512;
+  while (size < needed && size < 16384) size <<= 1;
+  return size;
+}
+
 function buildOffscreen(audioBuffer, canvasW, canvasH, freqMinHz, freqMaxHz) {
-  const fftSize = 512;
+  const fftSize = pickFftSize(audioBuffer.sampleRate, freqMinHz, freqMaxHz, canvasH);
   const hopSize = Math.floor(fftSize / 4);
   const numBins = fftSize / 2;
   const nyquist = audioBuffer.sampleRate / 2;
