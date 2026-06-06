@@ -4,7 +4,7 @@ import { supabase } from '@/api/supabaseClient';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import MarkerClusterGroup from 'react-leaflet-cluster';
 import L from 'leaflet';
-import { Bird, Bug, Waves, TreePine, Play, Pause } from 'lucide-react';
+import { Bird, Bug, Waves, TreePine, Play, Pause, ChevronDown, ChevronUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useTheme } from '@/lib/ThemeContext';
@@ -44,6 +44,7 @@ function MapBounds({ recordings }) {
 
 function RecordingPopup({ recording }) {
   const [playing, setPlaying] = useState(false);
+  const [descOpen, setDescOpen] = useState(false);
   const audioRef = useRef(null);
   const config = taxonConfig[recording.taxon] || { label: recording.taxon, color: '#5AAA95' };
 
@@ -55,6 +56,16 @@ function RecordingPopup({ recording }) {
 
   return (
     <div className="min-w-[240px] max-w-[300px] p-1">
+      {/* Species image thumbnail */}
+      {recording.image_url && (
+        <img
+          src={recording.image_url}
+          alt={recording.species_name}
+          className="w-full h-28 object-cover rounded-lg mb-2"
+          style={{ display: 'block' }}
+        />
+      )}
+
       <div className="flex items-start justify-between gap-2 mb-2">
         <div>
           <h3 className="font-heading font-semibold text-sm text-primary leading-tight">{recording.species_name}</h3>
@@ -66,12 +77,29 @@ function RecordingPopup({ recording }) {
           {config.label}
         </Badge>
       </div>
+
       {recording.location_name && (
-        <p className="text-xs text-muted-foreground mb-1">📍 {recording.location_name}</p>
+        <p className="text-xs text-muted-foreground mb-2">📍 {recording.location_name}</p>
       )}
+
+      {/* Collapsible description */}
       {recording.description && (
-        <p className="text-xs text-muted-foreground mb-2 leading-relaxed">{recording.description}</p>
+        <div className="mb-2">
+          <button
+            onClick={() => setDescOpen(v => !v)}
+            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors"
+          >
+            {descOpen ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+            {descOpen ? 'Ocultar descripción' : 'Ver descripción'}
+          </button>
+          {descOpen && (
+            <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed border-l-2 border-border pl-2">
+              {recording.description}
+            </p>
+          )}
+        </div>
       )}
+
       {recording.audio_url && (
         <div className="flex items-center gap-2">
           <Button size="sm" variant="outline" onClick={togglePlay} className="h-7 text-xs">
@@ -96,14 +124,15 @@ export default function BiophonyMap() {
     queryFn: async () => {
       const { data } = await supabase
         .from('map_recordings')
-        .select('*, species(common_name, scientific_name, taxon)')
+        .select('*, species(common_name, scientific_name, taxon, image_url)')
         .order('created_at', { ascending: false })
         .limit(500);
       return (data || []).map(r => ({
         ...r,
-        species_name: r.species?.common_name || '',
+        species_name: r.species?.common_name || r.species_name || '',
         scientific_name: r.species?.scientific_name || '',
-        taxon: r.species?.taxon || '',
+        taxon: r.species?.taxon || r.taxon || '',
+        image_url: r.species?.image_url || null,
       }));
     },
   });

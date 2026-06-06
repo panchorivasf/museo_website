@@ -74,18 +74,37 @@ export default function SpeciesForm({ species, onClose }) {
 
   const mutation = useMutation({
     mutationFn: async (data) => {
+      let speciesId = species?.id;
       if (isEditing) {
         const { error } = await supabase.from('species').update(data).eq('id', species.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from('species').insert(data);
-        if (error) { console.error('Insert error:', error); throw error; }
+        const { data: inserted, error } = await supabase.from('species').insert(data).select('id').single();
+        if (error) throw error;
+        speciesId = inserted.id;
+      }
+      // Sync to map_recordings if coordinates exist
+      if (speciesId && data.recording_latitude && data.recording_longitude) {
+        const mapPayload = {
+          species_id: speciesId,
+          latitude: parseFloat(data.recording_latitude),
+          longitude: parseFloat(data.recording_longitude),
+          location_name: data.recording_location || null,
+          audio_url: data.audio_url || null,
+          recording_date: data.recording_date || null,
+          recordist: data.recordist || null,
+        };
+        await supabase
+          .from('map_recordings')
+          .upsert(mapPayload, { onConflict: 'species_id' });
       }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-species'] });
       queryClient.invalidateQueries({ queryKey: ['species'] });
       queryClient.invalidateQueries({ queryKey: ['featured-species'] });
+      queryClient.invalidateQueries({ queryKey: ['map-recordings'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-recordings'] });
       onClose();
     },
   });

@@ -10,6 +10,18 @@ import { X, Upload, Loader2, Map } from 'lucide-react';
 import RecordistSelect from './RecordistSelect';
 import LocationPicker from './LocationPicker';
 
+const UNCATALOGUED = '__uncatalogued__';
+
+const taxonOptions = [
+  { value: 'aves', label: 'Aves' },
+  { value: 'insectos', label: 'Insectos' },
+  { value: 'anfibios', label: 'Anfibios' },
+  { value: 'cetaceos', label: 'Cetáceos' },
+  { value: 'focas', label: 'Focas' },
+  { value: 'nutrias', label: 'Nutrias' },
+  { value: 'mamiferos_terrestres', label: 'Mamíferos Terrestres' },
+];
+
 async function uploadFile(file) {
   const ext = file.name.split('.').pop();
   const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
@@ -25,8 +37,12 @@ export default function RecordingForm({ recording, onClose }) {
   const [uploading, setUploading] = useState(false);
   const [showMap, setShowMap] = useState(false);
 
+  const initialUncatalogued = isEditing && !recording.species_id && recording.species_name;
+
   const [form, setForm] = useState({
     species_id: recording?.species_id || '',
+    species_name: recording?.species_name || '',
+    taxon: recording?.taxon || '',
     latitude: recording?.latitude || '',
     longitude: recording?.longitude || '',
     location_name: recording?.location_name || '',
@@ -37,38 +53,57 @@ export default function RecordingForm({ recording, onClose }) {
     elevation: recording?.elevation || '',
   });
 
+  const [speciesMode, setSpeciesMode] = useState(
+    initialUncatalogued ? UNCATALOGUED : (recording?.species_id || '')
+  );
+
   const { data: speciesList = [] } = useQuery({
     queryKey: ['species-list'],
     queryFn: async () => {
       const { data } = await supabase
         .from('species')
-        .select('id, common_name, scientific_name, taxon, recording_location, recording_date, recordist, audio_url')
+        .select('id, common_name, scientific_name, taxon, recording_location, recording_latitude, recording_longitude, recording_date, recordist, audio_url')
         .order('common_name');
       return data || [];
     },
   });
 
-  const handleSpeciesSelect = (id) => {
-    const s = speciesList.find(sp => sp.id === id);
+  const handleSpeciesSelect = (value) => {
+    setSpeciesMode(value);
+    if (value === UNCATALOGUED) {
+      setForm(prev => ({ ...prev, species_id: '', species_name: '', taxon: '' }));
+      return;
+    }
+    const s = speciesList.find(sp => sp.id === value);
     if (!s) return;
     setForm(prev => ({
       ...prev,
-      species_id: id,
-      location_name: prev.location_name || s.recording_location || '',
-      recording_date: prev.recording_date || s.recording_date || '',
-      recordist: prev.recordist || s.recordist || '',
-      audio_url: prev.audio_url || s.audio_url || '',
+      species_id: value,
+      species_name: '',
+      taxon: '',
+      location_name: s.recording_location || prev.location_name,
+      latitude: s.recording_latitude ? String(s.recording_latitude) : prev.latitude,
+      longitude: s.recording_longitude ? String(s.recording_longitude) : prev.longitude,
+      recording_date: s.recording_date || prev.recording_date,
+      recordist: s.recordist || prev.recordist,
+      audio_url: s.audio_url || prev.audio_url,
     }));
   };
 
   const mutation = useMutation({
     mutationFn: async (data) => {
       const payload = {
-        ...data,
         species_id: data.species_id || null,
+        species_name: data.species_id ? null : (data.species_name || null),
+        taxon: data.species_id ? null : (data.taxon || null),
         latitude: parseFloat(data.latitude) || 0,
         longitude: parseFloat(data.longitude) || 0,
         elevation: data.elevation ? parseFloat(data.elevation) : null,
+        location_name: data.location_name || null,
+        audio_url: data.audio_url || null,
+        recording_date: data.recording_date || null,
+        recordist: data.recordist || null,
+        description: data.description || null,
       };
       if (isEditing) {
         const { error } = await supabase.from('map_recordings').update(payload).eq('id', recording.id);
@@ -126,6 +161,7 @@ export default function RecordingForm({ recording, onClose }) {
   };
 
   const selectedSpecies = speciesList.find(s => s.id === form.species_id);
+  const isUncatalogued = speciesMode === UNCATALOGUED;
 
   return (
     <div className="bg-card rounded-xl border border-border p-6 mb-6">
@@ -139,9 +175,10 @@ export default function RecordingForm({ recording, onClose }) {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-5">
+        {/* Species selection */}
         <div className="space-y-1.5">
-          <Label>Especie *</Label>
-          <Select value={form.species_id} onValueChange={handleSpeciesSelect} required>
+          <Label>Especie</Label>
+          <Select value={speciesMode} onValueChange={handleSpeciesSelect}>
             <SelectTrigger>
               <SelectValue placeholder="Seleccionar especie..." />
             </SelectTrigger>
@@ -152,6 +189,9 @@ export default function RecordingForm({ recording, onClose }) {
                   {s.scientific_name && <span className="text-muted-foreground italic ml-1 text-xs">— {s.scientific_name}</span>}
                 </SelectItem>
               ))}
+              <SelectItem value={UNCATALOGUED}>
+                <span className="text-muted-foreground italic">Sin catalogar (ingresar manualmente)</span>
+              </SelectItem>
             </SelectContent>
           </Select>
           {selectedSpecies && (
@@ -161,6 +201,26 @@ export default function RecordingForm({ recording, onClose }) {
           )}
         </div>
 
+        {/* Manual species fields for uncatalogued */}
+        {isUncatalogued && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-3 bg-muted/40 rounded-lg border border-border">
+            <div className="space-y-1.5">
+              <Label>Nombre de especie</Label>
+              <Input value={form.species_name} onChange={e => update('species_name', e.target.value)} placeholder="Nombre común" />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Taxón</Label>
+              <Select value={form.taxon} onValueChange={v => update('taxon', v)}>
+                <SelectTrigger><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
+                <SelectContent>
+                  {taxonOptions.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        )}
+
+        {/* Coordinates */}
         <div className="space-y-3">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="space-y-1.5">
