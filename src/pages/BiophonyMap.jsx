@@ -6,6 +6,7 @@ import MarkerClusterGroup from 'react-leaflet-cluster';
 import L from 'leaflet';
 import { Bird, Bug, Rat, Play, Pause, ChevronDown, ChevronUp } from 'lucide-react';
 import { WhaleTail, Frog } from '@/components/icons/TaxonIcons';
+import MiniSpectrogram from '@/components/audio/MiniSpectrogram';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useTheme } from '@/lib/ThemeContext';
@@ -52,57 +53,61 @@ function RecordingPopup({ recording }) {
   };
 
   return (
-    <div className="min-w-[240px] max-w-[300px] p-1">
+    <div style={{ minWidth: '220px', maxWidth: '280px', padding: '2px' }}>
       {/* Species image thumbnail */}
       {recording.image_url && (
         <img
           src={recording.image_url}
           alt={recording.species_name}
-          className="w-full h-28 object-cover rounded-lg mb-2"
-          style={{ display: 'block' }}
+          style={{ display: 'block', width: '100%', height: '80px', objectFit: 'cover', borderRadius: '6px', marginBottom: '6px' }}
         />
       )}
 
-      <div className="flex items-start justify-between gap-2 mb-2">
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '6px', marginBottom: '4px' }}>
         <div>
-          <h3 className="font-heading font-semibold text-sm text-primary leading-tight">{recording.species_name}</h3>
+          <div style={{ fontWeight: 600, fontSize: '13px', lineHeight: 1.2, color: 'var(--color-primary, #062a2e)' }}>{recording.species_name}</div>
           {recording.scientific_name && (
-            <p className="text-xs italic text-muted-foreground">{recording.scientific_name}</p>
+            <div style={{ fontSize: '11px', fontStyle: 'italic', color: '#888', lineHeight: 1.2 }}>{recording.scientific_name}</div>
           )}
         </div>
-        <Badge style={{ backgroundColor: config.color, color: 'white' }} className="text-[9px] uppercase tracking-wider shrink-0">
+        <span style={{ backgroundColor: config.color, color: 'white', fontSize: '9px', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '2px 5px', borderRadius: '4px', whiteSpace: 'nowrap', flexShrink: 0 }}>
           {config.label}
-        </Badge>
+        </span>
       </div>
 
       {recording.location_name && (
-        <p className="text-xs text-muted-foreground mb-2">📍 {recording.location_name}</p>
+        <div style={{ fontSize: '11px', color: '#888', marginBottom: '4px' }}>📍 {recording.location_name}</div>
       )}
 
-      {/* Collapsible description */}
       {recording.description && (
-        <div className="mb-2">
+        <div style={{ marginBottom: '6px' }}>
           <button
             onClick={() => setDescOpen(v => !v)}
-            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors"
+            style={{ display: 'flex', alignItems: 'center', gap: '3px', fontSize: '11px', color: '#888', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
           >
-            {descOpen ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-            {descOpen ? 'Ocultar descripción' : 'Ver descripción'}
+            {descOpen ? <ChevronUp style={{ width: '11px', height: '11px' }} /> : <ChevronDown style={{ width: '11px', height: '11px' }} />}
+            {descOpen ? 'Ocultar' : 'Ver descripción'}
           </button>
           {descOpen && (
-            <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed border-l-2 border-border pl-2">
+            <div style={{ fontSize: '11px', color: '#888', marginTop: '4px', lineHeight: 1.5, borderLeft: '2px solid #ddd', paddingLeft: '6px' }}>
               {recording.description}
-            </p>
+            </div>
           )}
         </div>
       )}
 
       {recording.audio_url && (
-        <div className="flex items-center gap-2">
-          <Button size="sm" variant="outline" onClick={togglePlay} className="h-7 text-xs">
-            {playing ? <Pause className="w-3 h-3 mr-1" /> : <Play className="w-3 h-3 mr-1" />}
-            {playing ? 'Pausar' : 'Escuchar'}
-          </Button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <button
+            onClick={togglePlay}
+            style={{ display: 'flex', alignItems: 'center', gap: '3px', fontSize: '11px', padding: '3px 8px', borderRadius: '4px', border: '1px solid #ccc', background: 'white', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}
+          >
+            {playing
+              ? <Pause style={{ width: '10px', height: '10px' }} />
+              : <Play style={{ width: '10px', height: '10px' }} />}
+            {playing ? 'Pausar' : 'Oír'}
+          </button>
+          <MiniSpectrogram audioUrl={recording.audio_url} />
           <audio ref={audioRef} src={recording.audio_url} onEnded={() => setPlaying(false)} />
         </div>
       )}
