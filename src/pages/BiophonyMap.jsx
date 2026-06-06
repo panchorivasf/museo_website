@@ -4,7 +4,8 @@ import { supabase } from '@/api/supabaseClient';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import MarkerClusterGroup from 'react-leaflet-cluster';
 import L from 'leaflet';
-import { Bird, Bug, Turtle, Fish, Rat, Play, Pause, ChevronDown, ChevronUp } from 'lucide-react';
+import { Bird, Bug, Rat, Play, Pause, ChevronDown, ChevronUp } from 'lucide-react';
+import { WhaleTail, Frog } from '@/components/icons/TaxonIcons';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useTheme } from '@/lib/ThemeContext';
@@ -13,8 +14,8 @@ import 'leaflet/dist/leaflet.css';
 const taxonConfig = {
   aves: { label: 'Aves', icon: Bird, color: '#087F8C' },
   insectos: { label: 'Insectos', icon: Bug, color: '#86A873' },
-  anfibios: { label: 'Anfibios', icon: Turtle, color: '#5AAA95' },
-  cetaceos: { label: 'Cetáceos', icon: Fish, color: '#095256' },
+  anfibios: { label: 'Anfibios', icon: Frog, color: '#5AAA95' },
+  cetaceos: { label: 'Cetáceos', icon: WhaleTail, color: '#095256' },
   mamiferos_terrestres: { label: 'Roedores', icon: Rat, color: '#BB9F06' },
 };
 

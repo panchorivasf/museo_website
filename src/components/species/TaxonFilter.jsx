@@ -1,13 +1,14 @@
 import React from 'react';
-import { Bird, Bug, Turtle, Fish, Rat } from 'lucide-react';
+import { Bird, Bug, Rat } from 'lucide-react';
+import { WhaleTail, Frog } from '@/components/icons/TaxonIcons';
 import { Button } from '@/components/ui/button';
 
 const taxa = [
   { key: 'all', label: 'Todos', icon: null },
   { key: 'aves', label: 'Aves', icon: Bird },
   { key: 'insectos', label: 'Insectos', icon: Bug },
-  { key: 'anfibios', label: 'Anfibios', icon: Turtle },
-  { key: 'cetaceos', label: 'Cetáceos', icon: Fish },
+  { key: 'anfibios', label: 'Anfibios', icon: Frog },
+  { key: 'cetaceos', label: 'Cetáceos', icon: WhaleTail },
   { key: 'mamiferos_terrestres', label: 'Roedores', icon: Rat },
 ];
 
