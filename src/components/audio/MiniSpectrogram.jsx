@@ -2,6 +2,7 @@ import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { Play, Pause } from 'lucide-react';
 
 const VISIBLE_SECONDS = 2;
+const CANVAS_H = 72;
 
 function fftInPlace(re, im) {
   const N = re.length;
@@ -60,8 +61,8 @@ function buildOffscreen(audioBuffer, canvasW, canvasH, freqMinHz, freqMaxHz) {
   const numFrames = Math.floor((channelData.length - fftSize) / hopSize);
   const re = new Float32Array(fftSize);
   const im = new Float32Array(fftSize);
-
   const frames = [];
+
   for (let f = 0; f < numFrames; f++) {
     const start = f * hopSize;
     for (let i = 0; i < fftSize; i++) {
@@ -79,7 +80,6 @@ function buildOffscreen(audioBuffer, canvasW, canvasH, freqMinHz, freqMaxHz) {
     frames.push(mags);
   }
 
-  // Frequency bin range
   const minBin = freqMinHz ? Math.max(0, Math.floor((freqMinHz / nyquist) * numBins)) : 0;
   const maxBin = freqMaxHz ? Math.min(numBins, Math.ceil((freqMaxHz / nyquist) * numBins)) : numBins;
 
@@ -98,7 +98,6 @@ function buildOffscreen(audioBuffer, canvasW, canvasH, freqMinHz, freqMaxHz) {
     const frameIdx = Math.floor((col / offW) * frames.length);
     const frame = frames[Math.min(frameIdx, frames.length - 1)];
     for (let row = 0; row < canvasH; row++) {
-      // Map row to the restricted freq range (bottom = minBin, top = maxBin)
       const binIdx = minBin + Math.floor(((canvasH - 1 - row) / canvasH) * (maxBin - minBin));
       const v = frame[Math.min(binIdx, numBins - 1)];
       const [r, g, b] = valueToColor(v);
@@ -124,8 +123,6 @@ export default function MiniSpectrogram({ audioUrl, frequencyMin, frequencyMax }
   const [loaded, setLoaded] = useState(false);
   const [playing, setPlaying] = useState(false);
 
-  const CANVAS_H = 44;
-
   const renderAt = useCallback((t) => {
     const canvas = canvasRef.current;
     const offscreen = offscreenRef.current;
@@ -139,13 +136,9 @@ export default function MiniSpectrogram({ audioUrl, frequencyMin, frequencyMax }
     const playheadOff = dur > 0 ? (t / dur) * offW : 0;
 
     let srcX, playheadScreen;
-    if (playheadOff <= centerX) {
-      srcX = 0; playheadScreen = playheadOff;
-    } else if (playheadOff >= offW - centerX) {
-      srcX = offW - W; playheadScreen = playheadOff - srcX;
-    } else {
-      srcX = playheadOff - centerX; playheadScreen = centerX;
-    }
+    if (playheadOff <= centerX) { srcX = 0; playheadScreen = playheadOff; }
+    else if (playheadOff >= offW - centerX) { srcX = offW - W; playheadScreen = playheadOff - srcX; }
+    else { srcX = playheadOff - centerX; playheadScreen = centerX; }
 
     ctx.clearRect(0, 0, W, H);
     ctx.drawImage(offscreen, srcX, 0, W, H, 0, 0, W, H);
@@ -168,6 +161,15 @@ export default function MiniSpectrogram({ audioUrl, frequencyMin, frequencyMax }
     if (resetOffset) pauseOffsetRef.current = 0;
   }, []);
 
+  const drawFrame = useCallback(() => {
+    const dur = audioBufferRef.current?.duration || 0;
+    if (dur > 0 && audioCtxRef.current && startTimeRef.current > 0) {
+      const elapsed = audioCtxRef.current.currentTime - startTimeRef.current;
+      renderAt(Math.min(pauseOffsetRef.current + elapsed, dur));
+    }
+    animRef.current = requestAnimationFrame(drawFrame);
+  }, [renderAt]);
+
   const loadAudio = useCallback(async () => {
     if (loaded || loading || !audioUrl) return;
     setLoading(true);
@@ -185,25 +187,16 @@ export default function MiniSpectrogram({ audioUrl, frequencyMin, frequencyMax }
       const H = CANVAS_H * dpr;
       if (canvas) { canvas.width = W; canvas.height = H; }
 
-      const freqMinHz = frequencyMin ? frequencyMin * 1000 : null;
-      const freqMaxHz = frequencyMax ? frequencyMax * 1000 : null;
-      offscreenRef.current = buildOffscreen(audio, W, H, freqMinHz, freqMaxHz);
-
+      offscreenRef.current = buildOffscreen(
+        audio, W, H,
+        frequencyMin ? frequencyMin * 1000 : null,
+        frequencyMax ? frequencyMax * 1000 : null,
+      );
       setLoaded(true);
       renderAt(0);
     } catch {}
     setLoading(false);
   }, [audioUrl, frequencyMin, frequencyMax, loaded, loading, renderAt]);
-
-  const drawFrame = useCallback(() => {
-    const dur = audioBufferRef.current?.duration || 0;
-    if (dur > 0 && audioCtxRef.current && startTimeRef.current > 0) {
-      const elapsed = audioCtxRef.current.currentTime - startTimeRef.current;
-      const t = Math.min(pauseOffsetRef.current + elapsed, dur);
-      renderAt(t);
-    }
-    animRef.current = requestAnimationFrame(drawFrame);
-  }, [renderAt]);
 
   const play = useCallback(async () => {
     await loadAudio();
@@ -234,51 +227,49 @@ export default function MiniSpectrogram({ audioUrl, frequencyMin, frequencyMax }
 
   const pause = useCallback(() => {
     if (audioCtxRef.current && startTimeRef.current > 0) {
-      const elapsed = audioCtxRef.current.currentTime - startTimeRef.current;
-      pauseOffsetRef.current = Math.min(pauseOffsetRef.current + elapsed, audioBufferRef.current?.duration || 0);
+      pauseOffsetRef.current = Math.min(
+        pauseOffsetRef.current + (audioCtxRef.current.currentTime - startTimeRef.current),
+        audioBufferRef.current?.duration || 0,
+      );
     }
     stopSource(false);
     setPlaying(false);
   }, [stopSource]);
 
-  // Preload spectrogram on mount
   useEffect(() => { loadAudio(); }, [audioUrl]);
 
-  useEffect(() => {
-    return () => {
-      cancelAnimationFrame(animRef.current);
-      if (sourceRef.current) { try { sourceRef.current.stop(); } catch {} }
-      if (audioCtxRef.current) audioCtxRef.current.close();
-    };
+  useEffect(() => () => {
+    cancelAnimationFrame(animRef.current);
+    if (sourceRef.current) { try { sourceRef.current.stop(); } catch {} }
+    if (audioCtxRef.current) audioCtxRef.current.close();
   }, []);
 
-  const toggle = () => playing ? pause() : play();
-
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+    <div style={{ position: 'relative', width: '100%', height: `${CANVAS_H}px`, borderRadius: '5px', overflow: 'hidden', background: '#062a2e' }}>
+      <canvas ref={canvasRef} style={{ display: 'block', width: '100%', height: '100%' }} />
+
+      {/* Play/pause button — bottom-left overlay */}
       <button
-        onClick={toggle}
+        onClick={playing ? pause : play}
         style={{
-          display: 'flex', alignItems: 'center', gap: '3px',
-          fontSize: '11px', padding: '3px 8px', borderRadius: '4px',
-          border: '1px solid #ccc', background: 'white', cursor: 'pointer',
-          whiteSpace: 'nowrap', flexShrink: 0,
+          position: 'absolute', bottom: '5px', left: '5px',
+          width: '24px', height: '24px', borderRadius: '50%',
+          background: 'rgba(0,0,0,0.55)', border: '1px solid rgba(255,255,255,0.3)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          cursor: 'pointer', color: 'white', padding: 0,
         }}
       >
         {playing
           ? <Pause style={{ width: '10px', height: '10px' }} />
-          : <Play style={{ width: '10px', height: '10px' }} />}
-        {playing ? 'Pausar' : 'Oír'}
+          : <Play style={{ width: '10px', height: '10px', marginLeft: '1px' }} />}
       </button>
 
-      <div style={{ flex: 1, position: 'relative', borderRadius: '4px', overflow: 'hidden', height: `${CANVAS_H}px`, background: '#062a2e' }}>
-        <canvas ref={canvasRef} style={{ display: 'block', width: '100%', height: '100%' }} />
-        {loading && (
-          <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <div style={{ width: '12px', height: '12px', border: '2px solid #BB9F06', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
-          </div>
-        )}
-      </div>
+      {/* Loading spinner */}
+      {loading && (
+        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ width: '14px', height: '14px', border: '2px solid #BB9F06', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
+        </div>
+      )}
     </div>
   );
 }

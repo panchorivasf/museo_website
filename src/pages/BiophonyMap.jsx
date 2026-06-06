@@ -4,7 +4,7 @@ import { supabase } from '@/api/supabaseClient';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import MarkerClusterGroup from 'react-leaflet-cluster';
 import L from 'leaflet';
-import { Bird, Bug, Rat, ChevronDown, ChevronUp } from 'lucide-react';
+import { Bird, Bug, Rat } from 'lucide-react';
 import { WhaleTail, Frog } from '@/components/icons/TaxonIcons';
 import MiniSpectrogram from '@/components/audio/MiniSpectrogram';
 import { Button } from '@/components/ui/button';
@@ -41,59 +41,74 @@ function MapBounds({ recordings }) {
 }
 
 function RecordingPopup({ recording }) {
-  const [descOpen, setDescOpen] = useState(false);
   const config = taxonConfig[recording.taxon] || { label: recording.taxon, color: '#5AAA95' };
 
   return (
-    <div style={{ minWidth: '220px', maxWidth: '280px', padding: '2px' }}>
-      {/* Species image thumbnail */}
+    <div style={{ width: '260px', padding: '0' }}>
+
+      {/* Row 1: image with taxon badge */}
       {recording.image_url && (
-        <img
-          src={recording.image_url}
-          alt={recording.species_name}
-          style={{ display: 'block', width: '100%', height: '80px', objectFit: 'cover', borderRadius: '6px', marginBottom: '6px' }}
-        />
+        <div style={{ position: 'relative', width: '100%', height: '90px', marginBottom: '6px' }}>
+          <img
+            src={recording.image_url}
+            alt={recording.species_name}
+            style={{ display: 'block', width: '100%', height: '100%', objectFit: 'cover', borderRadius: '6px' }}
+          />
+          <span style={{
+            position: 'absolute', top: '5px', right: '5px',
+            backgroundColor: config.color, color: 'white',
+            fontSize: '8px', letterSpacing: '0.06em', textTransform: 'uppercase',
+            padding: '2px 5px', borderRadius: '3px',
+          }}>
+            {config.label}
+          </span>
+        </div>
       )}
 
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '6px', marginBottom: '4px' }}>
-        <div>
-          <div style={{ fontWeight: 600, fontSize: '13px', lineHeight: 1.2, color: 'var(--color-primary, #062a2e)' }}>{recording.species_name}</div>
-          {recording.scientific_name && (
-            <div style={{ fontSize: '11px', fontStyle: 'italic', color: '#888', lineHeight: 1.2 }}>{recording.scientific_name}</div>
-          )}
-        </div>
-        <span style={{ backgroundColor: config.color, color: 'white', fontSize: '9px', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '2px 5px', borderRadius: '4px', whiteSpace: 'nowrap', flexShrink: 0 }}>
+      {/* If no image, show taxon badge inline */}
+      {!recording.image_url && (
+        <span style={{
+          display: 'inline-block', marginBottom: '4px',
+          backgroundColor: config.color, color: 'white',
+          fontSize: '8px', letterSpacing: '0.06em', textTransform: 'uppercase',
+          padding: '2px 5px', borderRadius: '3px',
+        }}>
           {config.label}
         </span>
-      </div>
-
-      {recording.location_name && (
-        <div style={{ fontSize: '11px', color: '#888', marginBottom: '4px' }}>📍 {recording.location_name}</div>
       )}
 
-      {recording.description && (
-        <div style={{ marginBottom: '6px' }}>
-          <button
-            onClick={() => setDescOpen(v => !v)}
-            style={{ display: 'flex', alignItems: 'center', gap: '3px', fontSize: '11px', color: '#888', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
-          >
-            {descOpen ? <ChevronUp style={{ width: '11px', height: '11px' }} /> : <ChevronDown style={{ width: '11px', height: '11px' }} />}
-            {descOpen ? 'Ocultar' : 'Ver descripción'}
-          </button>
-          {descOpen && (
-            <div style={{ fontSize: '11px', color: '#888', marginTop: '4px', lineHeight: 1.5, borderLeft: '2px solid #ddd', paddingLeft: '6px' }}>
-              {recording.description}
+      {/* Row 2: common name + scientific name */}
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: '5px', marginBottom: '5px', flexWrap: 'wrap' }}>
+        <span style={{ fontWeight: 700, fontSize: '13px', color: '#062a2e', lineHeight: 1.2 }}>
+          {recording.species_name}
+        </span>
+        {recording.scientific_name && (
+          <span style={{ fontSize: '10px', fontStyle: 'italic', color: '#999', lineHeight: 1.2 }}>
+            {recording.scientific_name}
+          </span>
+        )}
+      </div>
+
+      {/* Row 3: spectrogram with location (top-right) and play button (bottom-left) */}
+      {recording.audio_url && (
+        <div style={{ position: 'relative' }}>
+          <MiniSpectrogram
+            audioUrl={recording.audio_url}
+            frequencyMin={recording.frequency_min}
+            frequencyMax={recording.frequency_max}
+          />
+          {recording.location_name && (
+            <div style={{
+              position: 'absolute', top: '4px', right: '5px',
+              fontSize: '9px', color: 'rgba(255,255,255,0.8)',
+              background: 'rgba(0,0,0,0.4)', padding: '1px 4px', borderRadius: '3px',
+              pointerEvents: 'none', maxWidth: '160px',
+              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+            }}>
+              📍 {recording.location_name}
             </div>
           )}
         </div>
-      )}
-
-      {recording.audio_url && (
-        <MiniSpectrogram
-          audioUrl={recording.audio_url}
-          frequencyMin={recording.frequency_min}
-          frequencyMax={recording.frequency_max}
-        />
       )}
     </div>
   );
