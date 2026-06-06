@@ -222,6 +222,11 @@ export default function SpectrogramPlayer({ audioUrl, altText }) {
   }, [audioUrl, isLoaded]);
 
   // Draw static spectrogram once loaded
+  // Auto-load on mount
+  useEffect(() => {
+    if (audioUrl) loadAudio();
+  }, [audioUrl]);
+
   useEffect(() => {
     if (isLoaded && !isPlaying) {
       drawStatic();
