@@ -266,7 +266,7 @@ export default function SpeciesForm({ species, onClose }) {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="space-y-1.5">
             <Label>Frec. mín. informativa (kHz)</Label>
-            <Input type="number" step="0.1" min="0" value={form.frequency_min} onChange={e => update('frequency_min', e.target.value)} placeholder="ej: 2" />
+            <Input type="number" step="0.001" min="0" value={form.frequency_min} onChange={e => update('frequency_min', e.target.value)} placeholder="ej: 0.001" />
           </div>
           <div className="space-y-1.5">
             <Label>Frec. máx. informativa (kHz)</Label>
@@ -274,7 +274,7 @@ export default function SpeciesForm({ species, onClose }) {
           </div>
           <div className="space-y-1.5">
             <Label>Espectrograma mín. (kHz)</Label>
-            <Input type="number" step="0.1" min="0" value={form.spectrogram_min} onChange={e => update('spectrogram_min', e.target.value)} placeholder="ej: 0" />
+            <Input type="number" step="0.001" min="0" value={form.spectrogram_min} onChange={e => update('spectrogram_min', e.target.value)} placeholder="ej: 0" />
           </div>
           <div className="space-y-1.5">
             <Label>Espectrograma máx. (kHz)</Label>
