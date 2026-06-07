@@ -55,8 +55,18 @@ function valueToColor(v) {
 
 const VISIBLE_SECONDS = 4; // seconds visible in the canvas at once
 
-function buildSpectrogramImage(audioBuffer, canvasWidth, canvasHeight) {
-  const fftSize = 1024;
+function pickFftSize(sampleRate, freqMinHz, freqMaxHz, canvasH) {
+  const nyquist = sampleRate / 2;
+  const rangeHz = (freqMaxHz ?? nyquist) - (freqMinHz ?? 0);
+  const needed = Math.ceil(canvasH * sampleRate / rangeHz);
+  let size = 1024;
+  while (size < needed && size < 16384) size <<= 1;
+  return size;
+}
+
+function buildSpectrogramImage(audioBuffer, canvasWidth, canvasHeight, freqMinHz, freqMaxHz) {
+  const nyquist = audioBuffer.sampleRate / 2;
+  const fftSize = pickFftSize(audioBuffer.sampleRate, freqMinHz, freqMaxHz, canvasHeight);
   const hopSize = Math.floor(fftSize / 4);
   const numBins = fftSize / 2;
   const channelData = audioBuffer.getChannelData(0);
@@ -83,7 +93,9 @@ function buildSpectrogramImage(audioBuffer, canvasWidth, canvasHeight) {
     frames.push(mags);
   }
 
-  // Offscreen canvas is wider than display by the zoom factor
+  const minBin = freqMinHz ? Math.max(0, Math.floor((freqMinHz / nyquist) * numBins)) : 0;
+  const maxBin = freqMaxHz ? Math.min(numBins, Math.ceil((freqMaxHz / nyquist) * numBins)) : numBins;
+
   const duration = audioBuffer.duration;
   const zoomFactor = duration > VISIBLE_SECONDS ? duration / VISIBLE_SECONDS : 1;
   const offscreenWidth = Math.round(canvasWidth * zoomFactor);
@@ -99,7 +111,7 @@ function buildSpectrogramImage(audioBuffer, canvasWidth, canvasHeight) {
     const frameIdx = Math.floor((col / offscreenWidth) * frames.length);
     const frame = frames[Math.min(frameIdx, frames.length - 1)];
     for (let row = 0; row < canvasHeight; row++) {
-      const binIdx = Math.floor(((canvasHeight - 1 - row) / canvasHeight) * numBins);
+      const binIdx = minBin + Math.floor(((canvasHeight - 1 - row) / canvasHeight) * (maxBin - minBin));
       const v = frame[Math.min(binIdx, numBins - 1)];
       const [r, g, b] = valueToColor(v);
       const idx = (row * offscreenWidth + col) * 4;
@@ -107,10 +119,11 @@ function buildSpectrogramImage(audioBuffer, canvasWidth, canvasHeight) {
     }
   }
   ctx.putImageData(imageData, 0, 0);
-  return offscreen;
+  // Return visible freq range so labels can be drawn correctly
+  return { offscreen, visMinHz: freqMinHz ?? 0, visMaxHz: freqMaxHz ?? nyquist };
 }
 
-export default function SpectrogramPlayer({ audioUrl, altText }) {
+export default function SpectrogramPlayer({ audioUrl, altText, spectrogramMin, spectrogramMax }) {
   const canvasRef = useRef(null);
   const offscreenRef = useRef(null);
   const audioContextRef = useRef(null);
@@ -133,6 +146,7 @@ export default function SpectrogramPlayer({ audioUrl, altText }) {
   const [duration, setDuration] = useState(0);
   const [currentTime, setCurrentTime] = useState(0);
   const [nyquist, setNyquist] = useState(null);
+  const [visFreqRange, setVisFreqRange] = useState({ min: 0, max: null }); // Hz
 
   const renderAtTime = useCallback((t) => {
     const canvas = canvasRef.current;
@@ -164,16 +178,23 @@ export default function SpectrogramPlayer({ audioUrl, altText }) {
     ctx.clearRect(0, 0, W, H);
     ctx.drawImage(offscreen, srcX, 0, W, H, 0, 0, W, H);
 
-    // Frequency axis labels
+    // Frequency axis labels relative to visible range
     if (nyquist) {
-      const step = 10000;
+      const visMin = visFreqRange.min;
+      const visMax = visFreqRange.max ?? nyquist;
+      const rangeHz = visMax - visMin;
+      // Pick a round step that gives ~4-6 labels
+      const rawStep = rangeHz / 5;
+      const magnitude = Math.pow(10, Math.floor(Math.log10(rawStep)));
+      const step = Math.ceil(rawStep / magnitude) * magnitude;
+      const firstLabel = Math.ceil(visMin / step) * step;
       ctx.font = `${Math.round(H * 0.055)}px monospace`;
-      for (let f = step; f < nyquist; f += step) {
-        const y = H * (1 - f / nyquist);
+      for (let f = firstLabel; f < visMax; f += step) {
+        const y = H * (1 - (f - visMin) / rangeHz);
         ctx.fillStyle = 'rgba(0,0,0,0.4)';
-        ctx.fillRect(4, y - 12, 42, 13);
+        ctx.fillRect(4, y - 12, 48, 13);
         ctx.fillStyle = 'rgba(255,255,255,0.7)';
-        ctx.fillText(`${f / 1000} kHz`, 5, y - 2);
+        ctx.fillText(`${(f / 1000).toFixed(f % 1000 === 0 ? 0 : 1)} kHz`, 5, y - 2);
       }
     }
 
@@ -184,7 +205,7 @@ export default function SpectrogramPlayer({ audioUrl, altText }) {
     ctx.moveTo(playheadScreen, 0);
     ctx.lineTo(playheadScreen, H);
     ctx.stroke();
-  }, [nyquist]);
+  }, [nyquist, visFreqRange]);
 
   const drawFrame = useCallback(() => {
     const dur = audioBufferRef.current?.duration || 0;
@@ -213,11 +234,14 @@ export default function SpectrogramPlayer({ audioUrl, altText }) {
     setDuration(buffer.duration);
     setNyquist(buffer.sampleRate / 2);
 
-    // Build spectrogram image
     const canvas = canvasRef.current;
     const w = canvas ? canvas.width : 800;
     const h = canvas ? canvas.height : 200;
-    offscreenRef.current = buildSpectrogramImage(buffer, w, h);
+    const freqMinHz = spectrogramMin ? spectrogramMin * 1000 : null;
+    const freqMaxHz = spectrogramMax ? spectrogramMax * 1000 : null;
+    const result = buildSpectrogramImage(buffer, w, h, freqMinHz, freqMaxHz);
+    offscreenRef.current = result.offscreen;
+    setVisFreqRange({ min: result.visMinHz, max: result.visMaxHz });
 
     setIsLoaded(true);
     setIsLoading(false);
@@ -370,7 +394,11 @@ export default function SpectrogramPlayer({ audioUrl, altText }) {
       canvas.width = canvas.offsetWidth * dpr;
       canvas.height = canvas.offsetHeight * dpr;
       if (isLoaded && audioBufferRef.current) {
-        offscreenRef.current = buildSpectrogramImage(audioBufferRef.current, canvas.width, canvas.height);
+        const freqMinHz = spectrogramMin ? spectrogramMin * 1000 : null;
+        const freqMaxHz = spectrogramMax ? spectrogramMax * 1000 : null;
+        const result = buildSpectrogramImage(audioBufferRef.current, canvas.width, canvas.height, freqMinHz, freqMaxHz);
+        offscreenRef.current = result.offscreen;
+        setVisFreqRange({ min: result.visMinHz, max: result.visMaxHz });
         if (!isPlaying) drawStatic();
       }
     };

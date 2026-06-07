@@ -104,8 +104,8 @@ function RecordingPopup({ recording }) {
         <div style={{ position: 'relative' }}>
           <MiniSpectrogram
             audioUrl={recording.audio_url}
-            frequencyMin={recording.frequency_min}
-            frequencyMax={recording.frequency_max}
+            frequencyMin={recording.spectrogram_min ?? recording.frequency_min}
+            frequencyMax={recording.spectrogram_max ?? recording.frequency_max}
           />
           {recording.location_name && (
             <div style={{
@@ -135,7 +135,7 @@ export default function BiophonyMap() {
     queryFn: async () => {
       const { data } = await supabase
         .from('map_recordings')
-        .select('*, species(common_name, scientific_name, taxon, image_url, frequency_min, frequency_max)')
+        .select('*, species(common_name, scientific_name, taxon, image_url, frequency_min, frequency_max, spectrogram_min, spectrogram_max)')
         .order('created_at', { ascending: false })
         .limit(500);
       return (data || []).map(r => ({
@@ -146,6 +146,8 @@ export default function BiophonyMap() {
         image_url: r.species?.image_url || null,
         frequency_min: r.species?.frequency_min || null,
         frequency_max: r.species?.frequency_max || null,
+        spectrogram_min: r.species?.spectrogram_min || null,
+        spectrogram_max: r.species?.spectrogram_max || null,
       }));
     },
   });

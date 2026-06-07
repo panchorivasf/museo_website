@@ -99,7 +99,8 @@ export default function SpeciesDetail() {
           {species.audio_url && (
             <SpectrogramPlayer
               audioUrl={species.audio_url}
-              frequencyRange={species.frequency_range}
+              spectrogramMin={species.spectrogram_min}
+              spectrogramMax={species.spectrogram_max}
               altText={`Espectrograma del sonido de ${species.common_name} (${species.scientific_name})`}
             />
           )}

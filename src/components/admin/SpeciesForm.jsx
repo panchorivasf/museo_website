@@ -62,6 +62,8 @@ export default function SpeciesForm({ species, onClose }) {
     frequency_range: species?.frequency_range || '',
     frequency_min: species?.frequency_min || '',
     frequency_max: species?.frequency_max || '',
+    spectrogram_min: species?.spectrogram_min || '',
+    spectrogram_max: species?.spectrogram_max || '',
     recording_location: species?.recording_location || '',
     recording_latitude: species?.recording_latitude || '',
     recording_longitude: species?.recording_longitude || '',
@@ -263,12 +265,20 @@ export default function SpeciesForm({ species, onClose }) {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="space-y-1.5">
-            <Label>Frecuencia mín. (kHz)</Label>
+            <Label>Frec. mín. informativa (kHz)</Label>
             <Input type="number" step="0.1" min="0" value={form.frequency_min} onChange={e => update('frequency_min', e.target.value)} placeholder="ej: 2" />
           </div>
           <div className="space-y-1.5">
-            <Label>Frecuencia máx. (kHz)</Label>
+            <Label>Frec. máx. informativa (kHz)</Label>
             <Input type="number" step="0.1" min="0" value={form.frequency_max} onChange={e => update('frequency_max', e.target.value)} placeholder="ej: 8" />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Espectrograma mín. (kHz)</Label>
+            <Input type="number" step="0.1" min="0" value={form.spectrogram_min} onChange={e => update('spectrogram_min', e.target.value)} placeholder="ej: 0" />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Espectrograma máx. (kHz)</Label>
+            <Input type="number" step="0.1" min="0" value={form.spectrogram_max} onChange={e => update('spectrogram_max', e.target.value)} placeholder="ej: 10" />
           </div>
           <div className="space-y-1.5">
             <Label>Lugar de grabación</Label>
