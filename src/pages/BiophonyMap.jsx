@@ -58,11 +58,11 @@ function RecordingPopup({ recording }) {
 
       {/* Row 1: image with taxon badge */}
       {recording.image_url && (
-        <div style={{ position: 'relative', width: '100%', height: '90px', marginBottom: '6px' }}>
+        <div style={{ position: 'relative', width: '100%', marginBottom: '6px' }}>
           <img
             src={recording.image_url}
             alt={recording.species_name}
-            style={{ display: 'block', width: '100%', height: '100%', objectFit: 'cover', borderRadius: '6px' }}
+            style={{ display: 'block', width: '100%', height: 'auto', borderRadius: '6px' }}
           />
           <span style={{
             position: 'absolute', top: '5px', right: '5px',
