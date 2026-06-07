@@ -171,7 +171,7 @@ export default function SpeciesDetail() {
           {species.habitat && (
             <div className="bg-card rounded-xl border border-border p-5">
               <h3 className="text-xs font-heading uppercase tracking-widest text-muted-foreground font-semibold mb-3">Hábitat</h3>
-              <p className="text-sm text-muted-foreground leading-relaxed">{species.habitat}</p>
+              <ReactMarkdown className="text-sm text-muted-foreground leading-relaxed prose prose-sm max-w-none prose-p:my-1">{species.habitat}</ReactMarkdown>
             </div>
           )}
 
