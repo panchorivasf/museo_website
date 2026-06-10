@@ -55,9 +55,10 @@ export default function Home() {
   ];
 
   const [carouselApi, setCarouselApi] = React.useState(null);
+  const [isCarouselPaused, setIsCarouselPaused] = React.useState(false);
 
   React.useEffect(() => {
-    if (!carouselApi) {
+    if (!carouselApi || isCarouselPaused) {
       return;
     }
 
@@ -70,7 +71,7 @@ export default function Home() {
     }, 5000);
 
     return () => window.clearInterval(interval);
-  }, [carouselApi]);
+  }, [carouselApi, isCarouselPaused]);
 
   return (
     <div>
@@ -219,7 +220,12 @@ export default function Home() {
             </h2>
           </div>
         </div>
-        <Carousel className="relative" setApi={setCarouselApi}>
+        <Carousel
+          className="relative"
+          setApi={setCarouselApi}
+          onMouseEnter={() => setIsCarouselPaused(true)}
+          onMouseLeave={() => setIsCarouselPaused(false)}
+        >
           <CarouselPrevious className="absolute left-0 top-1/2 -translate-y-1/2 z-10" />
           <CarouselNext className="absolute right-0 top-1/2 -translate-y-1/2 z-10" />
           <CarouselContent className="gap-6">
