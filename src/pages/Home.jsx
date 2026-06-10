@@ -6,15 +6,7 @@ import { motion } from 'framer-motion';
 import { ArrowRight, MapPin, AudioWaveform, Headphones } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import SpeciesCard from '@/components/species/SpeciesCard';
-import { Carousel, CarouselContent, CarouselItem, CarouselPrevious, CarouselNext } from '@/components/ui/carousel';
 import chirihue from '@/assets/chirihue.png';
-import arequipa from '@/assets/slideshow/arequipa.JPG';
-import arica from '@/assets/slideshow/arica.JPG';
-import katalapi from '@/assets/slideshow/katalapi.JPG';
-import lanalhue from '@/assets/slideshow/lanalhue.JPG';
-import natri from '@/assets/slideshow/natri.JPG';
-import putre from '@/assets/slideshow/putre.JPG';
-import villarrica from '@/assets/slideshow/villarrica.JPG';
 
 export default function Home() {
   const { data: featured = [] } = useQuery({
@@ -43,35 +35,6 @@ export default function Home() {
   });
 
   const displaySpecies = featured.length > 0 ? featured : allSpecies.slice(0, 6);
-
-  const slides = [
-    { src: arequipa, alt: 'Laguna de Arequipa', caption: 'Paisajes de agua y cielo en el sur.' },
-    { src: arica, alt: 'Costa de Arica', caption: 'Olas, aves y ambiente marino del norte.' },
-    { src: katalapi, alt: 'Bosque de Katalapi', caption: 'Bosques y senderos para el sonido natural.' },
-    { src: lanalhue, alt: 'Humedal Lanalhue', caption: 'Ecosistemas acuáticos con vida silvestre sonora.' },
-    { src: natri, alt: 'Paisaje natural', caption: 'Vistas abiertas del paisaje y la biodiversidad.' },
-    { src: putre, alt: 'Altiplano de Putre', caption: 'Altiplano andino con sonidos de altura.' },
-    { src: villarrica, alt: 'Volcán Villarrica', caption: 'Montañas y volcanes en el corazón de Chile.' },
-  ];
-
-  const [carouselApi, setCarouselApi] = React.useState(null);
-  const [isCarouselPaused, setIsCarouselPaused] = React.useState(false);
-
-  React.useEffect(() => {
-    if (!carouselApi || isCarouselPaused) {
-      return;
-    }
-
-    const interval = window.setInterval(() => {
-      if (carouselApi.canScrollNext()) {
-        carouselApi.scrollNext();
-      } else {
-        carouselApi.scrollTo(0);
-      }
-    }, 5000);
-
-    return () => window.clearInterval(interval);
-  }, [carouselApi, isCarouselPaused]);
 
   return (
     <div>
@@ -207,45 +170,6 @@ export default function Home() {
           </div>
         </section>
       )}
-
-      {/* Slideshow */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-10">
-          <div>
-            <span className="text-xs font-heading uppercase tracking-[0.25em] text-secondary font-medium">
-              Galería
-            </span>
-            <h2 className="text-3xl font-display font-bold text-primary mt-1">
-              Imágenes del paisaje sonoro
-            </h2>
-          </div>
-        </div>
-        <Carousel
-          className="relative"
-          setApi={setCarouselApi}
-          onMouseEnter={() => setIsCarouselPaused(true)}
-          onMouseLeave={() => setIsCarouselPaused(false)}
-        >
-          <CarouselPrevious className="absolute left-0 top-1/2 -translate-y-1/2 z-10" />
-          <CarouselNext className="absolute right-0 top-1/2 -translate-y-1/2 z-10" />
-          <CarouselContent className="gap-6">
-            {slides.map((image, index) => (
-              <CarouselItem key={index}>
-                <div className="overflow-hidden rounded-[2rem] border border-border bg-muted shadow-xl shadow-black/10">
-                  <img
-                    src={image.src}
-                    alt={image.alt}
-                    className="h-[320px] w-full object-cover transition duration-300 hover:scale-105"
-                  />
-                  <div className="px-5 py-4 bg-white/90 text-sm font-medium text-slate-900">
-                    {image.caption}
-                  </div>
-                </div>
-              </CarouselItem>
-            ))}
-          </CarouselContent>
-        </Carousel>
-      </section>
 
       {/* Landscape CTA */}
       <section className="relative min-h-[50vh] flex items-center">
