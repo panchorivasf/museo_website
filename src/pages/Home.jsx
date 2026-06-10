@@ -65,14 +65,21 @@ export default function Home() {
             transition={{ duration: 0.8 }}
             className="max-w-2xl"
           >
-            <div className="mb-8">
-              <img src="/logo.png" alt="Museo Bioacústico" className="h-24 object-contain" />
+            <div className="mb-8 relative min-h-[16rem]">
+              <img
+                src="/chirihue.png"
+                alt="Museo Bioacústico"
+                className="hidden md:block absolute right-0 top-4 h-52 lg:h-64 object-contain"
+              />
+              <div className="md:hidden mx-auto mb-6 w-full max-w-xs">
+                <img src="/chirihue.png" alt="Museo Bioacústico" className="mx-auto h-36 object-contain" />
+              </div>
+              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-display font-bold text-white leading-[1.1] tracking-tight md:pr-56">
+                Escucha el<br />
+                <span className="text-secondary">Patrimonio Natural</span><br />
+                de Chile
+              </h1>
             </div>
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-display font-bold text-white leading-[1.1] tracking-tight">
-              Escucha el<br />
-              <span className="text-secondary">Patrimonio Natural</span><br />
-              de Chile
-            </h1>
             <p className="mt-6 text-lg text-white/80 leading-relaxed max-w-xl font-body">
               Descubre la riqueza acústica de la biodiversidad chilena. Explora espectrogramas,
               grabaciones de campo y mapas interactivos de nuestro archivo sonoro.
