@@ -3,7 +3,6 @@ import { motion } from 'framer-motion';
 import { AudioWaveform, Eye, Users, Target } from 'lucide-react';
 import { Carousel, CarouselContent, CarouselItem, CarouselPrevious, CarouselNext } from '@/components/ui/carousel';
 import arequipa from '@/assets/slideshow/arequipa.JPG';
-import arica from '@/assets/slideshow/arica.JPG';
 import katalapi from '@/assets/slideshow/katalapi.JPG';
 import lanalhue from '@/assets/slideshow/lanalhue.JPG';
 import natri from '@/assets/slideshow/natri.JPG';
@@ -12,13 +11,12 @@ import villarrica from '@/assets/slideshow/villarrica.JPG';
 
 export default function About() {
   const slides = [
-    { src: arequipa, alt: 'Laguna de Arequipa', caption: 'Paisajes de agua y cielo en el sur.' },
-    { src: arica, alt: 'Costa de Arica', caption: 'Olas, aves y ambiente marino del norte.' },
-    { src: katalapi, alt: 'Bosque de Katalapi', caption: 'Bosques y senderos para el sonido natural.' },
-    { src: lanalhue, alt: 'Humedal Lanalhue', caption: 'Ecosistemas acuáticos con vida silvestre sonora.' },
-    { src: natri, alt: 'Paisaje natural', caption: 'Vistas abiertas del paisaje y la biodiversidad.' },
-    { src: putre, alt: 'Altiplano de Putre', caption: 'Altiplano andino con sonidos de altura.' },
-    { src: villarrica, alt: 'Volcán Villarrica', caption: 'Montañas y volcanes en el corazón de Chile.' },
+    { src: arequipa, alt: 'Laguna de Arequipa' },
+    { src: katalapi, alt: 'Bosque de Katalapi' },
+    { src: lanalhue, alt: 'Humedal Lanalhue' },
+    { src: natri, alt: 'Paisaje natural' },
+    { src: putre, alt: 'Altiplano de Putre' },
+    { src: villarrica, alt: 'Volcán Villarrica' },
   ];
 
   const [carouselApi, setCarouselApi] = React.useState(null);
@@ -144,11 +142,8 @@ export default function About() {
                   <img
                     src={image.src}
                     alt={image.alt}
-                    className="h-[320px] w-full object-cover transition duration-300 hover:scale-105"
+                    className="h-[520px] w-full object-contain bg-black transition duration-300 hover:scale-105"
                   />
-                  <div className="px-5 py-4 bg-white/90 text-sm font-medium text-slate-900">
-                    {image.caption}
-                  </div>
                 </div>
               </CarouselItem>
             ))}
