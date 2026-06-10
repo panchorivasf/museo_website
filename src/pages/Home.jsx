@@ -6,6 +6,7 @@ import { motion } from 'framer-motion';
 import { ArrowRight, MapPin, AudioWaveform, Headphones } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import SpeciesCard from '@/components/species/SpeciesCard';
+import chirihue from '@/assets/chirihue.png';
 
 export default function Home() {
   const { data: featured = [] } = useQuery({
@@ -67,12 +68,12 @@ export default function Home() {
           >
             <div className="mb-8 relative min-h-[16rem]">
               <img
-                src="/chirihue.png"
+                src={chirihue}
                 alt="Museo Bioacústico"
                 className="hidden md:block absolute right-0 top-4 h-52 lg:h-64 object-contain"
               />
               <div className="md:hidden mx-auto mb-6 w-full max-w-xs">
-                <img src="/chirihue.png" alt="Museo Bioacústico" className="mx-auto h-36 object-contain" />
+                <img src={chirihue} alt="Museo Bioacústico" className="mx-auto h-36 object-contain" />
               </div>
               <h1 className="text-4xl sm:text-5xl lg:text-6xl font-display font-bold text-white leading-[1.1] tracking-tight md:pr-56">
                 Escucha el<br />
