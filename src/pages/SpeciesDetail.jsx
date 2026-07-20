@@ -1,8 +1,8 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/api/supabaseClient';
 import { Link, useParams } from 'react-router-dom';
-import { ArrowLeft, MapPin, Calendar, User, Info, Share2, Copy, Facebook, Instagram } from 'lucide-react';
+import { ArrowLeft, MapPin, Calendar, User, Info, Share2, Copy, Facebook, Instagram, Code, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import SpectrogramPlayer from '@/components/audio/SpectrogramPlayer';
@@ -33,6 +33,7 @@ const conservationColors = {
 
 export default function SpeciesDetail() {
   const { id } = useParams();
+  const [showEmbedMenu, setShowEmbedMenu] = useState(false);
 
   const { data: species, isLoading } = useQuery({
     queryKey: ['species', id],
@@ -133,6 +134,18 @@ export default function SpeciesDetail() {
   const handleCopyLink = () => {
     navigator.clipboard.writeText(window.location.href);
     alert('Enlace copiado al portapapeles');
+  };
+
+  const handleEmbedSimple = () => {
+    const embedCode = `<iframe src='${window.location.origin}/embed/${id}?simple=1' scrolling='no' frameborder='0' width='340' height='115'></iframe>`;
+    navigator.clipboard.writeText(embedCode);
+    alert('Código de embed copiado al portapapeles');
+  };
+
+  const handleEmbedSonogram = () => {
+    const embedCode = `<iframe src='${window.location.origin}/embed/${id}' scrolling='no' frameborder='0' width='340' height='220'></iframe>`;
+    navigator.clipboard.writeText(embedCode);
+    alert('Código de embed copiado al portapapeles');
   };
 
   const handleShareInstagram = () => {
@@ -275,6 +288,41 @@ export default function SpeciesDetail() {
               >
                 <Copy className="w-4 h-4" />
               </Button>
+              <div className="relative">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowEmbedMenu(!showEmbedMenu)}
+                  className="flex items-center gap-2"
+                  title="Copiar código embed"
+                >
+                  <Code className="w-4 h-4" />
+                  <span className="hidden sm:inline text-xs">Embed</span>
+                  <ChevronDown className="w-3 h-3" />
+                </Button>
+                {showEmbedMenu && (
+                  <div className="absolute right-0 mt-1 bg-card border border-border rounded-lg shadow-lg z-50 min-w-max">
+                    <button
+                      onClick={() => {
+                        handleEmbedSimple();
+                        setShowEmbedMenu(false);
+                      }}
+                      className="block w-full text-left px-4 py-2 text-sm text-muted-foreground hover:text-primary hover:bg-muted transition-colors first:rounded-t-md"
+                    >
+                      Simple (340×115)
+                    </button>
+                    <button
+                      onClick={() => {
+                        handleEmbedSonogram();
+                        setShowEmbedMenu(false);
+                      }}
+                      className="block w-full text-left px-4 py-2 text-sm text-muted-foreground hover:text-primary hover:bg-muted transition-colors border-t border-border last:rounded-b-md"
+                    >
+                      Con espectrograma (340×220)
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
