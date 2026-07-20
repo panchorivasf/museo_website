@@ -107,6 +107,9 @@ export default function SpeciesForm({ species, onClose }) {
       queryClient.invalidateQueries({ queryKey: ['admin-recordings'] });
       onClose();
     },
+    onError: (err) => {
+      alert('Error al guardar: ' + (err?.message || 'Por favor intenta de nuevo'));
+    },
   });
 
   const handleFileUpload = async (e, field) => {

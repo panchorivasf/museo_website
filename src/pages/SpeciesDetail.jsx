@@ -1,8 +1,8 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/api/supabaseClient';
 import { Link, useParams } from 'react-router-dom';
-import { ArrowLeft, MapPin, Calendar, User, Info } from 'lucide-react';
+import { ArrowLeft, MapPin, Calendar, User, Info, Share2, Copy, Facebook, Instagram } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import SpectrogramPlayer from '@/components/audio/SpectrogramPlayer';
@@ -46,6 +46,94 @@ export default function SpeciesDetail() {
     },
     enabled: !!id,
   });
+
+  // Update page title and Open Graph meta tags
+  useEffect(() => {
+    if (species) {
+      document.title = `${species.common_name} - Museo Bioacústico`;
+
+      // Update or create Open Graph meta tags
+      const updateMetaTag = (property, content) => {
+        let tag = document.querySelector(`meta[property="${property}"]`);
+        if (!tag) {
+          tag = document.createElement('meta');
+          tag.setAttribute('property', property);
+          document.head.appendChild(tag);
+        }
+        tag.setAttribute('content', content);
+      };
+
+      const updateMetaName = (name, content) => {
+        let tag = document.querySelector(`meta[name="${name}"]`);
+        if (!tag) {
+          tag = document.createElement('meta');
+          tag.setAttribute('name', name);
+          document.head.appendChild(tag);
+        }
+        tag.setAttribute('content', content);
+      };
+
+      updateMetaTag('og:title', species.common_name);
+      updateMetaTag('og:description', species.sound_description || species.description || `${species.common_name} (${species.scientific_name})`);
+      updateMetaTag('og:url', window.location.href);
+      updateMetaTag('og:type', 'website');
+      if (species.image_url) {
+        updateMetaTag('og:image', species.image_url);
+        updateMetaTag('og:image:alt', species.common_name);
+      }
+      updateMetaTag('og:site_name', 'Museo Bioacústico');
+
+      updateMetaName('twitter:card', 'summary_large_image');
+      updateMetaName('twitter:title', species.common_name);
+      updateMetaName('twitter:description', species.sound_description || species.description || `${species.common_name} (${species.scientific_name})`);
+      if (species.image_url) {
+        updateMetaName('twitter:image', species.image_url);
+      }
+    }
+  }, [species]);
+
+  const handleShare = async () => {
+    const url = window.location.href;
+    const title = species.common_name;
+    const text = `${species.common_name} - ${species.scientific_name}`;
+
+    // Use Web Share API if available
+    if (navigator.share) {
+      try {
+        await navigator.share({ title, text, url });
+      } catch (err) {
+        console.log('Share cancelled or failed');
+      }
+    } else {
+      // Fallback: copy to clipboard
+      navigator.clipboard.writeText(url);
+      alert('Enlace copiado al portapapeles');
+    }
+  };
+
+  const handleShareFacebook = () => {
+    const url = window.location.href;
+    window.open(
+      `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`,
+      'facebook-share',
+      'width=600,height=400'
+    );
+  };
+
+  const handleShareTwitter = () => {
+    const url = window.location.href;
+    const text = `Descubre ${species.common_name} en Museo Bioacústico`;
+    window.open(
+      `https://twitter.com/intent/tweet?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`,
+      'twitter-share',
+      'width=600,height=400'
+    );
+  };
+
+  const handleCopyLink = () => {
+    navigator.clipboard.writeText(window.location.href);
+    alert('Enlace copiado al portapapeles');
+  };
 
   if (isLoading) {
     return (
@@ -136,6 +224,45 @@ export default function SpeciesDetail() {
               {species.common_name}
             </h1>
             <p className="text-lg italic text-muted-foreground mt-1">{species.scientific_name}</p>
+            
+            <div className="flex gap-2 mt-4">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleShare}
+                className="flex items-center gap-2"
+                title="Compartir"
+              >
+                <Share2 className="w-4 h-4" />
+                <span className="hidden sm:inline">Compartir</span>
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={handleShareFacebook}
+                title="Compartir en Facebook"
+              >
+                <Facebook className="w-4 h-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={handleShareTwitter}
+                title="Compartir en Twitter"
+              >
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M23.953 4.57a10 10 0 01-2.825.775 4.958 4.958 0 002.163-2.723c-.951.555-2.005.959-3.127 1.184a4.92 4.92 0 00-8.384 4.482C7.69 8.095 4.067 6.13 1.64 3.162a4.822 4.822 0 00-.666 2.475c0 1.71.87 3.213 2.188 4.096a4.904 4.904 0 01-2.228-.616v.06a4.923 4.923 0 003.946 4.827 4.996 4.996 0 01-2.212.085 4.936 4.936 0 004.604 3.417 9.867 9.867 0 01-6.102 2.105c-.39 0-.779-.023-1.17-.067a13.995 13.995 0 007.557 2.209c9.053 0 13.998-7.496 13.998-13.985 0-.21 0-.42-.015-.63A9.935 9.935 0 0024 4.59z" />
+                </svg>
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={handleCopyLink}
+                title="Copiar enlace"
+              >
+                <Copy className="w-4 h-4" />
+              </Button>
+            </div>
           </div>
 
           <div className="bg-card rounded-xl border border-border p-5 space-y-3">
