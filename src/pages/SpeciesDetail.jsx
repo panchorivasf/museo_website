@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/api/supabaseClient';
 import { Link, useParams } from 'react-router-dom';
-import { ArrowLeft, MapPin, Calendar, User, Info, Share2, Copy, Facebook, Instagram, Code, ChevronDown } from 'lucide-react';
+import { ArrowLeft, MapPin, Calendar, User, Info, Share2, Copy, Code, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import SpectrogramPlayer from '@/components/audio/SpectrogramPlayer';
@@ -112,25 +112,6 @@ export default function SpeciesDetail() {
     }
   };
 
-  const handleShareFacebook = () => {
-    const url = window.location.href;
-    window.open(
-      `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`,
-      'facebook-share',
-      'width=600,height=400'
-    );
-  };
-
-  const handleShareTwitter = () => {
-    const url = window.location.href;
-    const text = `Descubre ${species.common_name} en Museo Bioacústico`;
-    window.open(
-      `https://twitter.com/intent/tweet?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`,
-      'twitter-share',
-      'width=600,height=400'
-    );
-  };
-
   const handleCopyLink = () => {
     navigator.clipboard.writeText(window.location.href);
     alert('Enlace copiado al portapapeles');
@@ -146,13 +127,6 @@ export default function SpeciesDetail() {
     const embedCode = `<iframe src='${window.location.origin}/embed/${id}' scrolling='no' frameborder='0' width='340' height='220'></iframe>`;
     navigator.clipboard.writeText(embedCode);
     alert('Código de embed copiado al portapapeles');
-  };
-
-  const handleShareInstagram = () => {
-    // Instagram doesn't have a direct web share intent
-    // Copy link and prompt user
-    navigator.clipboard.writeText(window.location.href);
-    alert('Enlace copiado. Puedes compartirlo en tu biografía de Instagram o enviarlo a través de mensajes diretos.');
   };
 
   if (isLoading) {
@@ -257,30 +231,6 @@ export default function SpeciesDetail() {
                 <span className="hidden sm:inline">Compartir</span>
               </Button>
               <Button
-                variant="outline"
-                size="icon"
-                onClick={handleShareFacebook}
-                title="Compartir en Facebook"
-              >
-                <Facebook className="w-4 h-4" />
-              </Button>
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={handleShareTwitter}
-                title="Compartir en Twitter"
-              >
-                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M23.953 4.57a10 10 0 01-2.825.775 4.958 4.958 0 002.163-2.723c-.951.555-2.005.959-3.127 1.184a4.92 4.92 0 00-8.384 4.482C7.69 8.095 4.067 6.13 1.64 3.162a4.822 4.822 0 00-.666 2.475c0 1.71.87 3.213 2.188 4.096a4.904 4.904 0 01-2.228-.616v.06a4.923 4.923 0 003.946 4.827 4.996 4.996 0 01-2.212.085 4.936 4.936 0 004.604 3.417 9.867 9.867 0 01-6.102 2.105c-.39 0-.779-.023-1.17-.067a13.995 13.995 0 007.557 2.209c9.053 0 13.998-7.496 13.998-13.985 0-.21 0-.42-.015-.63A9.935 9.935 0 0024 4.59z" />
-                </svg>
-              </Button>              <Button
-                variant="outline"
-                size="icon"
-                onClick={handleShareInstagram}
-                title="Compartir en Instagram"
-              >
-                <Instagram className="w-4 h-4" />
-              </Button>              <Button
                 variant="outline"
                 size="icon"
                 onClick={handleCopyLink}
