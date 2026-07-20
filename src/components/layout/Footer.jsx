@@ -47,7 +47,7 @@ export default function Footer() {
               </div>
               <div className="flex items-center gap-2 text-sm text-primary-foreground/70">
                 <Mail className="w-4 h-4 shrink-0" />
-                <span>contacto@museobioacustico.cl</span>
+                <span>contacto@museobioacustico.org</span>
               </div>
             </div>
           </div>
