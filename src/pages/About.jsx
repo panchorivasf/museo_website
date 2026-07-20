@@ -122,9 +122,6 @@ export default function About() {
             <span className="text-xs font-heading uppercase tracking-[0.25em] text-secondary font-medium">
               Galería
             </span>
-            <h2 className="text-3xl font-display font-bold text-primary mt-1">
-              Imágenes del paisaje sonoro
-            </h2>
           </div>
         </div>
         <Carousel
