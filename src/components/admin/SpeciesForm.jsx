@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { X, Upload, Loader2, Map } from 'lucide-react';
+import { X, Upload, Loader2, Map, BadgeCheck, AlertTriangle } from 'lucide-react';
 import LocationPicker from './LocationPicker';
 import RecordistSelect from './RecordistSelect';
 
@@ -166,6 +166,24 @@ export default function SpeciesForm({ species, onClose }) {
 
   const update = (field, value) => setForm(prev => ({ ...prev, [field]: value }));
 
+  const [gbifChecking, setGbifChecking] = useState(false);
+  const [gbifResult, setGbifResult] = useState(null);
+
+  const checkGbif = async () => {
+    if (!form.scientific_name.trim()) return;
+    setGbifChecking(true);
+    setGbifResult(null);
+    try {
+      const res = await fetch(`https://api.gbif.org/v1/species/match?name=${encodeURIComponent(form.scientific_name)}`);
+      const data = await res.json();
+      setGbifResult(data);
+    } catch (err) {
+      setGbifResult({ error: true, message: err.message });
+    } finally {
+      setGbifChecking(false);
+    }
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
     mutation.mutate(form);
@@ -188,8 +206,9 @@ export default function SpeciesForm({ species, onClose }) {
             <Label>Nombre común *</Label>
             <Input
               value={form.common_name}
-              name="species-common-name-nofill"
-              autoComplete="chrome-off-nope"
+              name="sp-field-a1"
+              id="sp-field-a1"
+              autoComplete="new-password"
               list="existing-common-names"
               onChange={e => {
                 const value = e.target.value;
@@ -215,11 +234,13 @@ export default function SpeciesForm({ species, onClose }) {
             <Label>Nombre científico *</Label>
             <Input
               value={form.scientific_name}
-              name="species-scientific-name-nofill"
-              autoComplete="chrome-off-nope"
+              name="sp-field-a2"
+              id="sp-field-a2"
+              autoComplete="new-password"
               list="existing-scientific-names"
               onChange={e => {
                 const value = e.target.value;
+                setGbifResult(null);
                 const match = !isEditing && existingSpecies.find(s => s.scientific_name === value);
                 if (match) {
                   setForm(prev => ({
@@ -238,6 +259,41 @@ export default function SpeciesForm({ species, onClose }) {
             <datalist id="existing-scientific-names">
               {existingSpecies.map(s => <option key={s.scientific_name} value={s.scientific_name} />)}
             </datalist>
+            <Button
+              type="button" variant="outline" size="sm"
+              className="gap-1.5 text-xs h-7 mt-1"
+              disabled={!form.scientific_name.trim() || gbifChecking}
+              onClick={checkGbif}
+            >
+              {gbifChecking ? <Loader2 className="w-3 h-3 animate-spin" /> : <BadgeCheck className="w-3 h-3" />}
+              Verificar en GBIF
+            </Button>
+            {gbifResult && (
+              <div className="text-xs rounded-md border border-border bg-muted/40 p-2 mt-1 space-y-0.5">
+                {gbifResult.error || !gbifResult.matchType || gbifResult.matchType === 'NONE' ? (
+                  <p className="flex items-center gap-1.5 text-destructive">
+                    <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                    No se encontró coincidencia en GBIF para este nombre.
+                  </p>
+                ) : (
+                  <>
+                    <p className="flex items-center gap-1.5 text-secondary font-medium">
+                      <BadgeCheck className="w-3.5 h-3.5 shrink-0" />
+                      {gbifResult.canonicalName || gbifResult.scientificName}
+                      {gbifResult.status && <span className="font-normal text-muted-foreground">({gbifResult.status})</span>}
+                    </p>
+                    <p className="text-muted-foreground">
+                      {[gbifResult.rank, gbifResult.family, gbifResult.order].filter(Boolean).join(' · ')}
+                    </p>
+                    {gbifResult.canonicalName && gbifResult.canonicalName !== form.scientific_name && (
+                      <p className="text-ocher">
+                        Difiere del nombre ingresado — revisa la ortografía.
+                      </p>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
           </div>
           <div className="space-y-1.5">
             <Label>Taxón *</Label>
