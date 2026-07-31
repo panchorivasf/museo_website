@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/api/supabaseClient';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -42,6 +42,17 @@ export default function SpeciesForm({ species, onClose }) {
   const isEditing = !!species;
   const queryClient = useQueryClient();
   const [uploading, setUploading] = useState(false);
+
+  const { data: existingSpecies = [] } = useQuery({
+    queryKey: ['species-list-lite'],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('species')
+        .select('common_name, scientific_name, taxon')
+        .order('common_name');
+      return data || [];
+    },
+  });
 
   const [form, setForm] = useState({
     common_name: species?.common_name || '',
@@ -158,11 +169,56 @@ export default function SpeciesForm({ species, onClose }) {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-1.5">
             <Label>Nombre común *</Label>
-            <Input value={form.common_name} onChange={e => update('common_name', e.target.value)} required />
+            <Input
+              value={form.common_name}
+              autoComplete="off"
+              list="existing-common-names"
+              onChange={e => {
+                const value = e.target.value;
+                const match = !isEditing && existingSpecies.find(s => s.common_name === value);
+                if (match) {
+                  setForm(prev => ({
+                    ...prev,
+                    common_name: value,
+                    scientific_name: match.scientific_name || prev.scientific_name,
+                    taxon: match.taxon || prev.taxon,
+                  }));
+                } else {
+                  update('common_name', value);
+                }
+              }}
+              required
+            />
+            <datalist id="existing-common-names">
+              {existingSpecies.map(s => <option key={s.common_name} value={s.common_name} />)}
+            </datalist>
           </div>
           <div className="space-y-1.5">
             <Label>Nombre científico *</Label>
-            <Input value={form.scientific_name} onChange={e => update('scientific_name', e.target.value)} className="italic" required />
+            <Input
+              value={form.scientific_name}
+              autoComplete="off"
+              list="existing-scientific-names"
+              onChange={e => {
+                const value = e.target.value;
+                const match = !isEditing && existingSpecies.find(s => s.scientific_name === value);
+                if (match) {
+                  setForm(prev => ({
+                    ...prev,
+                    scientific_name: value,
+                    common_name: match.common_name || prev.common_name,
+                    taxon: match.taxon || prev.taxon,
+                  }));
+                } else {
+                  update('scientific_name', value);
+                }
+              }}
+              className="italic"
+              required
+            />
+            <datalist id="existing-scientific-names">
+              {existingSpecies.map(s => <option key={s.scientific_name} value={s.scientific_name} />)}
+            </datalist>
           </div>
           <div className="space-y-1.5">
             <Label>Taxón *</Label>
