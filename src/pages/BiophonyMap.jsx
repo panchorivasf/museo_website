@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/api/supabaseClient';
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, Tooltip, useMap } from 'react-leaflet';
 import MarkerClusterGroup from 'react-leaflet-cluster';
 import L from 'leaflet';
-import { Bird, Bug, Rat } from 'lucide-react';
+import { Bird, Bug, Rat, Info } from 'lucide-react';
 import { WhaleTail, Frog } from '@/components/icons/TaxonIcons';
 import MiniSpectrogram, { stopActiveMiniSpectrogram } from '@/components/audio/MiniSpectrogram';
 import { Button } from '@/components/ui/button';
@@ -52,11 +52,14 @@ function MapEvents() {
 
 function RecordingPopup({ recording }) {
   const config = taxonConfig[recording.taxon] || { label: recording.taxon, color: '#5AAA95' };
+  const [showInfo, setShowInfo] = useState(false);
+
+  const hasMetadata = recording.location_name || recording.recording_date || recording.recordist || recording.description;
 
   return (
     <div style={{ width: '260px', padding: '0' }} onClick={e => e.stopPropagation()}>
 
-      {/* Row 1: image with taxon badge */}
+      {/* Row 1: image with taxon badge + info toggle */}
       {recording.image_url && (
         <div style={{ position: 'relative', width: '100%', marginBottom: '6px' }}>
           <img
@@ -72,19 +75,54 @@ function RecordingPopup({ recording }) {
           }}>
             {config.label}
           </span>
+          {hasMetadata && (
+            <button
+              type="button"
+              title="Ver información de la grabación"
+              onMouseEnter={() => setShowInfo(true)}
+              onClick={() => setShowInfo(v => !v)}
+              style={{
+                position: 'absolute', top: '5px', left: '5px',
+                width: '20px', height: '20px', borderRadius: '50%',
+                background: 'rgba(0,0,0,0.5)', color: 'white',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                border: 'none', cursor: 'pointer', padding: 0,
+              }}
+            >
+              <Info size={12} />
+            </button>
+          )}
         </div>
       )}
 
-      {/* If no image, show taxon badge inline */}
+      {/* If no image, show taxon badge + info toggle inline */}
       {!recording.image_url && (
-        <span style={{
-          display: 'inline-block', marginBottom: '4px',
-          backgroundColor: config.color, color: 'white',
-          fontSize: '8px', letterSpacing: '0.06em', textTransform: 'uppercase',
-          padding: '2px 5px', borderRadius: '3px',
-        }}>
-          {config.label}
-        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
+          <span style={{
+            display: 'inline-block',
+            backgroundColor: config.color, color: 'white',
+            fontSize: '8px', letterSpacing: '0.06em', textTransform: 'uppercase',
+            padding: '2px 5px', borderRadius: '3px',
+          }}>
+            {config.label}
+          </span>
+          {hasMetadata && (
+            <button
+              type="button"
+              title="Ver información de la grabación"
+              onMouseEnter={() => setShowInfo(true)}
+              onClick={() => setShowInfo(v => !v)}
+              style={{
+                width: '18px', height: '18px', borderRadius: '50%',
+                background: 'rgba(0,0,0,0.5)', color: 'white',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                border: 'none', cursor: 'pointer', padding: 0,
+              }}
+            >
+              <Info size={11} />
+            </button>
+          )}
+        </div>
       )}
 
       {/* Row 2: common name + scientific name */}
@@ -98,6 +136,23 @@ function RecordingPopup({ recording }) {
           </span>
         )}
       </div>
+
+      {/* Recording metadata panel, toggled via the info icon */}
+      {showInfo && hasMetadata && (
+        <div
+          onMouseLeave={() => setShowInfo(false)}
+          style={{
+            fontSize: '10.5px', color: '#444', background: '#f4f4f2',
+            border: '1px solid #e2e2df', borderRadius: '6px',
+            padding: '6px 8px', marginBottom: '6px', lineHeight: 1.5,
+          }}
+        >
+          {recording.location_name && <div>📍 <strong>Lugar:</strong> {recording.location_name}</div>}
+          {recording.recording_date && <div>📅 <strong>Fecha:</strong> {recording.recording_date}</div>}
+          {recording.recordist && <div>🎙️ <strong>Grabado por:</strong> {recording.recordist}</div>}
+          {recording.description && <div>📝 {recording.description}</div>}
+        </div>
+      )}
 
       {/* Row 3: spectrogram with location (top-right) and play button (bottom-left) */}
       {recording.audio_url && (
@@ -182,6 +237,9 @@ export default function BiophonyMap() {
             const config = taxonConfig[rec.taxon] || { color: '#5AAA95' };
             return (
               <Marker key={rec.id} position={[rec.latitude, rec.longitude]} icon={createIcon(config.color)}>
+                <Tooltip direction="top" offset={[0, -10]} opacity={0.95}>
+                  {rec.species_name}
+                </Tooltip>
                 <Popup maxWidth={320}>
                   <RecordingPopup recording={rec} />
                 </Popup>
