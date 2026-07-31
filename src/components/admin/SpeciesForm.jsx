@@ -101,7 +101,9 @@ export default function SpeciesForm({ species, onClose }) {
         if (error) throw error;
         speciesId = inserted.id;
       }
-      // Sync to map_recordings if coordinates exist
+      // Sync to map_recordings if coordinates exist: update the species' own pin
+      // (its earliest linked map_recordings row) instead of a species_id-unique upsert,
+      // since a species can have multiple separate map recordings.
       if (speciesId && data.recording_latitude && data.recording_longitude) {
         const mapPayload = {
           species_id: speciesId,
@@ -109,12 +111,22 @@ export default function SpeciesForm({ species, onClose }) {
           longitude: parseFloat(data.recording_longitude),
           location_name: data.recording_location || null,
           audio_url: data.audio_url || null,
+          audio_original_name: data.audio_original_name || null,
           recording_date: data.recording_date || null,
           recordist: data.recordist || null,
         };
-        await supabase
+        const { data: existing } = await supabase
           .from('map_recordings')
-          .upsert(mapPayload, { onConflict: 'species_id' });
+          .select('id')
+          .eq('species_id', speciesId)
+          .order('created_at', { ascending: true })
+          .limit(1)
+          .maybeSingle();
+        if (existing) {
+          await supabase.from('map_recordings').update(mapPayload).eq('id', existing.id);
+        } else {
+          await supabase.from('map_recordings').insert(mapPayload);
+        }
       }
     },
     onSuccess: () => {
