@@ -26,7 +26,7 @@ async function uploadFile(file) {
   const { error } = await supabase.storage.from('media').upload(fileName, file, { cacheControl: '3600' });
   if (error) throw error;
   const { data: { publicUrl } } = supabase.storage.from('media').getPublicUrl(fileName);
-  return publicUrl;
+  return { url: publicUrl, originalName: file.name };
 }
 
 export default function RecordingForm({ recording, onClose }) {
@@ -45,6 +45,7 @@ export default function RecordingForm({ recording, onClose }) {
     longitude: recording?.longitude || '',
     location_name: recording?.location_name || '',
     audio_url: recording?.audio_url || '',
+    audio_original_name: recording?.audio_original_name || '',
     recording_date: recording?.recording_date || '',
     recordist: recording?.recordist || '',
     description: recording?.description || '',
@@ -93,6 +94,7 @@ export default function RecordingForm({ recording, onClose }) {
         elevation: data.elevation ? parseFloat(data.elevation) : null,
         location_name: data.location_name || null,
         audio_url: data.audio_url || null,
+        audio_original_name: data.audio_original_name || null,
         recording_date: data.recording_date || null,
         recordist: data.recordist || null,
         description: data.description || null,
@@ -120,8 +122,8 @@ export default function RecordingForm({ recording, onClose }) {
     if (!file) return;
     setUploading(true);
     try {
-      const url = await uploadFile(file);
-      setForm(prev => ({ ...prev, audio_url: url }));
+      const { url, originalName } = await uploadFile(file);
+      setForm(prev => ({ ...prev, audio_url: url, audio_original_name: originalName }));
     } catch (err) {
       alert('Error al subir archivo: ' + err.message);
     } finally {
@@ -273,7 +275,10 @@ export default function RecordingForm({ recording, onClose }) {
 
         <div className="space-y-1.5">
           <Label>Archivo de audio</Label>
-          {form.audio_url && <audio controls src={form.audio_url} className="w-full mb-2" />}
+          {form.audio_url && <audio controls src={form.audio_url} className="w-full mb-1" />}
+          {form.audio_original_name && (
+            <p className="text-xs text-muted-foreground mb-2 truncate">Archivo original: {form.audio_original_name}</p>
+          )}
           <label className="flex items-center gap-2 px-3 py-2 bg-muted rounded-lg cursor-pointer hover:bg-muted/80 transition-colors text-sm w-fit">
             <Upload className="w-4 h-4" />
             {uploading ? 'Subiendo...' : 'Subir audio'}

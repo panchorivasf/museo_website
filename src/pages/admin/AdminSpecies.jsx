@@ -95,9 +95,13 @@ export default function AdminSpecies() {
                     <td className="p-3">
                       <Badge variant="outline" className="text-xs">{taxonLabels[sp.taxon] || sp.taxon}</Badge>
                     </td>
-                    <td className="p-3 hidden md:table-cell">
+                    <td className="p-3 hidden md:table-cell max-w-[160px]">
                       {sp.audio_url
-                        ? <span className="text-xs text-secondary">✓ Audio</span>
+                        ? (
+                          <span className="text-xs text-secondary" title={sp.audio_original_name || ''}>
+                            ✓ Audio{sp.audio_original_name ? <span className="text-muted-foreground"> — {sp.audio_original_name}</span> : ''}
+                          </span>
+                        )
                         : <span className="text-xs text-muted-foreground/50">—</span>}
                     </td>
                     <td className="p-3 hidden sm:table-cell">
