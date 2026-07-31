@@ -61,8 +61,8 @@ function pickFftSize(sampleRate, freqMinHz, freqMaxHz, canvasH) {
   return size;
 }
 
-function buildOffscreen(audioBuffer, canvasW, canvasH, freqMinHz, freqMaxHz) {
-  const fftSize = pickFftSize(audioBuffer.sampleRate, freqMinHz, freqMaxHz, canvasH);
+function buildOffscreen(audioBuffer, canvasW, canvasH, freqMinHz, freqMaxHz, fftSizeOverride) {
+  const fftSize = fftSizeOverride || pickFftSize(audioBuffer.sampleRate, freqMinHz, freqMaxHz, canvasH);
   const hopSize = Math.floor(fftSize / 4);
   const numBins = fftSize / 2;
   const nyquist = audioBuffer.sampleRate / 2;
@@ -115,7 +115,7 @@ function buildOffscreen(audioBuffer, canvasW, canvasH, freqMinHz, freqMaxHz) {
   return offscreen;
 }
 
-export default function MiniSpectrogram({ audioUrl, frequencyMin, frequencyMax }) {
+export default function MiniSpectrogram({ audioUrl, frequencyMin, frequencyMax, fftSize }) {
   const canvasRef = useRef(null);
   const offscreenRef = useRef(null);
   const audioCtxRef = useRef(null);
@@ -207,12 +207,13 @@ export default function MiniSpectrogram({ audioUrl, frequencyMin, frequencyMax }
         audio, W, H,
         frequencyMin ? frequencyMin * 1000 : null,
         frequencyMax ? frequencyMax * 1000 : null,
+        fftSize,
       );
       setLoaded(true);
       renderAt(0);
     } catch {}
     setLoading(false);
-  }, [audioUrl, frequencyMin, frequencyMax, loaded, loading, renderAt]);
+  }, [audioUrl, frequencyMin, frequencyMax, fftSize, loaded, loading, renderAt]);
 
   const play = useCallback(async () => {
     await loadAudio();

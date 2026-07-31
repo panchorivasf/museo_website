@@ -183,6 +183,7 @@ export default function SpeciesDetail() {
               audioUrl={species.audio_url}
               spectrogramMin={species.spectrogram_min}
               spectrogramMax={species.spectrogram_max}
+              fftSize={species.fft_size}
               altText={`Espectrograma del sonido de ${species.common_name} (${species.scientific_name})`}
             />
           )}

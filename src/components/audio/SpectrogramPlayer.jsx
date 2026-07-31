@@ -64,9 +64,9 @@ function pickFftSize(sampleRate, freqMinHz, freqMaxHz, canvasH) {
   return size;
 }
 
-function buildSpectrogramImage(audioBuffer, canvasWidth, canvasHeight, freqMinHz, freqMaxHz) {
+function buildSpectrogramImage(audioBuffer, canvasWidth, canvasHeight, freqMinHz, freqMaxHz, fftSizeOverride) {
   const nyquist = audioBuffer.sampleRate / 2;
-  const fftSize = pickFftSize(audioBuffer.sampleRate, freqMinHz, freqMaxHz, canvasHeight);
+  const fftSize = fftSizeOverride || pickFftSize(audioBuffer.sampleRate, freqMinHz, freqMaxHz, canvasHeight);
   const hopSize = Math.floor(fftSize / 4);
   const numBins = fftSize / 2;
   const channelData = audioBuffer.getChannelData(0);
@@ -123,7 +123,7 @@ function buildSpectrogramImage(audioBuffer, canvasWidth, canvasHeight, freqMinHz
   return { offscreen, visMinHz: freqMinHz ?? 0, visMaxHz: freqMaxHz ?? nyquist };
 }
 
-export default function SpectrogramPlayer({ audioUrl, altText, spectrogramMin, spectrogramMax }) {
+export default function SpectrogramPlayer({ audioUrl, altText, spectrogramMin, spectrogramMax, fftSize }) {
   const canvasRef = useRef(null);
   const offscreenRef = useRef(null);
   const audioContextRef = useRef(null);
@@ -239,13 +239,13 @@ export default function SpectrogramPlayer({ audioUrl, altText, spectrogramMin, s
     const h = canvas ? canvas.height : 200;
     const freqMinHz = spectrogramMin ? spectrogramMin * 1000 : null;
     const freqMaxHz = spectrogramMax ? spectrogramMax * 1000 : null;
-    const result = buildSpectrogramImage(buffer, w, h, freqMinHz, freqMaxHz);
+    const result = buildSpectrogramImage(buffer, w, h, freqMinHz, freqMaxHz, fftSize);
     offscreenRef.current = result.offscreen;
     setVisFreqRange({ min: result.visMinHz, max: result.visMaxHz });
 
     setIsLoaded(true);
     setIsLoading(false);
-  }, [audioUrl, isLoaded]);
+  }, [audioUrl, isLoaded, fftSize]);
 
   // Draw static spectrogram once loaded
   // Auto-load on mount
@@ -396,7 +396,7 @@ export default function SpectrogramPlayer({ audioUrl, altText, spectrogramMin, s
       if (isLoaded && audioBufferRef.current) {
         const freqMinHz = spectrogramMin ? spectrogramMin * 1000 : null;
         const freqMaxHz = spectrogramMax ? spectrogramMax * 1000 : null;
-        const result = buildSpectrogramImage(audioBufferRef.current, canvas.width, canvas.height, freqMinHz, freqMaxHz);
+        const result = buildSpectrogramImage(audioBufferRef.current, canvas.width, canvas.height, freqMinHz, freqMaxHz, fftSize);
         offscreenRef.current = result.offscreen;
         setVisFreqRange({ min: result.visMinHz, max: result.visMaxHz });
         if (!isPlaying) drawStatic();
@@ -405,7 +405,7 @@ export default function SpectrogramPlayer({ audioUrl, altText, spectrogramMin, s
     resize();
     window.addEventListener('resize', resize);
     return () => window.removeEventListener('resize', resize);
-  }, [isLoaded, isPlaying, drawStatic]);
+  }, [isLoaded, isPlaying, drawStatic, fftSize]);
 
   const formatTime = (s) => `${Math.floor(s / 60)}:${Math.floor(s % 60).toString().padStart(2, '0')}`;
   const speedLabel = playbackRate < 1 ? `${playbackRate}× (−${Math.round((1 - playbackRate) * 100)}% freq)` : `${playbackRate}×`;

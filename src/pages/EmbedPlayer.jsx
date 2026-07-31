@@ -67,6 +67,7 @@ export default function EmbedPlayer() {
         audioUrl={species.audio_url}
         spectrogramMin={species.spectrogram_min}
         spectrogramMax={species.spectrogram_max}
+        fftSize={species.fft_size}
         altText={`${species.common_name}`}
       />
       <div className="mt-3 space-y-1">

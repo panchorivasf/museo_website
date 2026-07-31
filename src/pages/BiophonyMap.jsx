@@ -158,6 +158,7 @@ function RecordingPopup({ recording }) {
             audioUrl={recording.audio_url}
             frequencyMin={recording.spectrogram_min ?? recording.frequency_min}
             frequencyMax={recording.spectrogram_max ?? recording.frequency_max}
+            fftSize={recording.fft_size}
           />
         </div>
       )}
@@ -176,7 +177,7 @@ export default function BiophonyMap() {
     queryFn: async () => {
       const { data } = await supabase
         .from('map_recordings')
-        .select('*, species(common_name, scientific_name, taxon, image_url, frequency_min, frequency_max, spectrogram_min, spectrogram_max)')
+        .select('*, species(common_name, scientific_name, taxon, image_url, frequency_min, frequency_max, spectrogram_min, spectrogram_max, fft_size)')
         .order('created_at', { ascending: false })
         .limit(500);
       return (data || []).map(r => ({
@@ -189,6 +190,7 @@ export default function BiophonyMap() {
         frequency_max: r.species?.frequency_max || null,
         spectrogram_min: r.species?.spectrogram_min || null,
         spectrogram_max: r.species?.spectrogram_max || null,
+        fft_size: r.species?.fft_size || null,
       }));
     },
   });

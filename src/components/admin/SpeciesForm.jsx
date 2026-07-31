@@ -10,6 +10,9 @@ import { Switch } from '@/components/ui/switch';
 import { X, Upload, Loader2, Map, BadgeCheck, AlertTriangle } from 'lucide-react';
 import LocationPicker from './LocationPicker';
 import RecordistSelect from './RecordistSelect';
+import SpectrogramPlayer from '@/components/audio/SpectrogramPlayer';
+
+const fftSizeOptions = [512, 1024, 2048, 4096, 8192, 16384];
 
 const taxonOptions = [
   { value: 'aves', label: 'Aves' },
@@ -76,6 +79,7 @@ export default function SpeciesForm({ species, onClose }) {
     frequency_max: species?.frequency_max || '',
     spectrogram_min: species?.spectrogram_min ?? 0,
     spectrogram_max: species?.spectrogram_max || '',
+    fft_size: species?.fft_size || '',
     recording_location: species?.recording_location || '',
     recording_latitude: species?.recording_latitude || '',
     recording_longitude: species?.recording_longitude || '',
@@ -84,7 +88,7 @@ export default function SpeciesForm({ species, onClose }) {
     featured: species?.featured || false,
   });
 
-  const numericFields = ['frequency_min', 'frequency_max', 'spectrogram_min', 'spectrogram_max', 'recording_latitude', 'recording_longitude'];
+  const numericFields = ['frequency_min', 'frequency_max', 'spectrogram_min', 'spectrogram_max', 'fft_size', 'recording_latitude', 'recording_longitude'];
 
   const mutation = useMutation({
     mutationFn: async (rawData) => {
@@ -437,6 +441,40 @@ export default function SpeciesForm({ species, onClose }) {
           </div>
           <RecordistSelect value={form.recordist} onChange={v => update('recordist', v)} />
         </div>
+
+        {form.audio_url && (
+          <div className="space-y-2 border border-border rounded-lg p-4">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <p className="text-xs font-heading uppercase tracking-widest text-muted-foreground font-semibold">
+                Vista previa del espectrograma
+              </p>
+              <div className="flex items-center gap-2">
+                <Label className="text-xs whitespace-nowrap">Resolución (FFT)</Label>
+                <Select
+                  value={form.fft_size ? String(form.fft_size) : 'auto'}
+                  onValueChange={v => update('fft_size', v === 'auto' ? '' : v)}
+                >
+                  <SelectTrigger className="h-8 w-36 text-xs"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="auto">Automático</SelectItem>
+                    {fftSizeOptions.map(s => <SelectItem key={s} value={String(s)}>{s}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Si el espectrograma automático se ve borroso o muy comprimido, prueba un valor de FFT más alto (más resolución en frecuencia, más lento) o más bajo (más resolución en el tiempo).
+            </p>
+            <SpectrogramPlayer
+              key={`${form.audio_url}-${form.spectrogram_min}-${form.spectrogram_max}-${form.fft_size}`}
+              audioUrl={form.audio_url}
+              spectrogramMin={form.spectrogram_min || form.frequency_min}
+              spectrogramMax={form.spectrogram_max || form.frequency_max}
+              fftSize={form.fft_size ? parseInt(form.fft_size, 10) : null}
+              altText="Vista previa del espectrograma"
+            />
+          </div>
+        )}
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-1.5">
