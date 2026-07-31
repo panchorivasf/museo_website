@@ -79,12 +79,6 @@ export default function RecordingForm({ recording, onClose }) {
       species_id: value,
       species_name: '',
       taxon: '',
-      location_name: s.recording_location || prev.location_name,
-      latitude: s.recording_latitude ? String(s.recording_latitude) : prev.latitude,
-      longitude: s.recording_longitude ? String(s.recording_longitude) : prev.longitude,
-      recording_date: s.recording_date || prev.recording_date,
-      recordist: s.recordist || prev.recordist,
-      audio_url: s.audio_url || prev.audio_url,
     }));
   };
 

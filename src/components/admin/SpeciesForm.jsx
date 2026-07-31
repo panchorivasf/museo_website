@@ -60,9 +60,9 @@ export default function SpeciesForm({ species, onClose }) {
     image_url: species?.image_url || '',
     habitat: species?.habitat || '',
     frequency_range: species?.frequency_range || '',
-    frequency_min: species?.frequency_min || '',
+    frequency_min: species?.frequency_min ?? 0,
     frequency_max: species?.frequency_max || '',
-    spectrogram_min: species?.spectrogram_min || '',
+    spectrogram_min: species?.spectrogram_min ?? 0,
     spectrogram_max: species?.spectrogram_max || '',
     recording_location: species?.recording_location || '',
     recording_latitude: species?.recording_latitude || '',
@@ -72,8 +72,14 @@ export default function SpeciesForm({ species, onClose }) {
     featured: species?.featured || false,
   });
 
+  const numericFields = ['frequency_min', 'frequency_max', 'spectrogram_min', 'spectrogram_max', 'recording_latitude', 'recording_longitude'];
+
   const mutation = useMutation({
-    mutationFn: async (data) => {
+    mutationFn: async (rawData) => {
+      const data = { ...rawData };
+      for (const field of numericFields) {
+        data[field] = data[field] === '' || data[field] == null ? null : parseFloat(data[field]);
+      }
       let speciesId = species?.id;
       if (isEditing) {
         const { error } = await supabase.from('species').update(data).eq('id', species.id);
@@ -108,7 +114,11 @@ export default function SpeciesForm({ species, onClose }) {
       onClose();
     },
     onError: (err) => {
-      alert('Error al guardar: ' + (err?.message || 'Por favor intenta de nuevo'));
+      const isNumericError = err?.message?.includes('invalid input syntax for type numeric');
+      const message = isNumericError
+        ? 'Uno de los campos numéricos contiene un valor inválido. Revisa los campos de frecuencia y espectrograma.'
+        : (err?.message || 'Por favor intenta de nuevo');
+      alert('Error al guardar: ' + message);
     },
   });
 
