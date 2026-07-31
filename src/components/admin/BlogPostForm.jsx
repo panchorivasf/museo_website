@@ -7,9 +7,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { X, Upload, Loader2, Type, Image as ImageIcon, AudioLines, MapPinned, ArrowUp, ArrowDown, Trash2, Plus } from 'lucide-react';
+import { X, Upload, Loader2, Type, Image as ImageIcon, AudioLines, MapPinned, ArrowUp, ArrowDown, Trash2, Plus, Eye } from 'lucide-react';
 import SpectrogramPlayer from '@/components/audio/SpectrogramPlayer';
 import MultiLocationPicker from './MultiLocationPicker';
+import BlogPostView from '@/components/blog/BlogPostView';
 
 const quillModules = {
   toolbar: [
@@ -187,10 +188,12 @@ export default function BlogPostForm({ post, onClose }) {
   const queryClient = useQueryClient();
   const [uploading, setUploading] = useState(false);
   const [slugTouched, setSlugTouched] = useState(isEditing);
+  const [showPreview, setShowPreview] = useState(false);
 
   const [form, setForm] = useState({
     title: post?.title || '',
     subtitle: post?.subtitle || '',
+    author_name: post?.author_name || '',
     slug: post?.slug || '',
     cover_image_url: post?.cover_image_url || '',
     published: post?.published || false,
@@ -283,9 +286,14 @@ export default function BlogPostForm({ post, onClose }) {
         <h3 className="font-heading font-semibold text-primary text-lg">
           {isEditing ? 'Editar Entrada' : 'Nueva Entrada'}
         </h3>
-        <Button variant="ghost" size="icon" onClick={onClose}>
-          <X className="w-4 h-4" />
-        </Button>
+        <div className="flex items-center gap-1">
+          <Button type="button" variant="outline" size="sm" className="gap-1.5" onClick={() => setShowPreview(true)}>
+            <Eye className="w-3.5 h-3.5" /> Vista previa
+          </Button>
+          <Button variant="ghost" size="icon" onClick={onClose}>
+            <X className="w-4 h-4" />
+          </Button>
+        </div>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-5">
@@ -296,6 +304,10 @@ export default function BlogPostForm({ post, onClose }) {
         <div className="space-y-1.5">
           <Label>Subtítulo</Label>
           <Input value={form.subtitle} onChange={e => update('subtitle', e.target.value)} />
+        </div>
+        <div className="space-y-1.5">
+          <Label>Autor/a</Label>
+          <Input value={form.author_name} onChange={e => update('author_name', e.target.value)} placeholder="ej: Equipo Museo Bioacústico" />
         </div>
         <div className="space-y-1.5">
           <Label>URL (slug) *</Label>
@@ -373,6 +385,20 @@ export default function BlogPostForm({ post, onClose }) {
           </Button>
         </div>
       </form>
+
+      {showPreview && (
+        <div className="fixed inset-0 z-[2000] bg-background/95 backdrop-blur-sm overflow-y-auto">
+          <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8">
+            <div className="flex items-center justify-between mb-6 sticky top-0 bg-background/95 backdrop-blur-sm py-2 -mx-4 px-4 sm:-mx-6 sm:px-6 border-b border-border">
+              <p className="text-xs font-heading uppercase tracking-widest text-muted-foreground font-semibold">Vista previa</p>
+              <Button type="button" variant="outline" size="sm" onClick={() => setShowPreview(false)}>
+                <X className="w-4 h-4 mr-1.5" /> Cerrar
+              </Button>
+            </div>
+            <BlogPostView post={{ ...form, content: blocks }} />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

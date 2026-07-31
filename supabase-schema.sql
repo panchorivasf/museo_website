@@ -73,6 +73,7 @@ create table if not exists blog_posts (
   id uuid primary key default gen_random_uuid(),
   title text not null,
   subtitle text,
+  author_name text,
   slug text unique not null,
   cover_image_url text,
   content jsonb not null default '[]',
