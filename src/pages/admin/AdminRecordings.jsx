@@ -26,7 +26,7 @@ export default function AdminRecordings() {
     queryFn: async () => {
       const { data } = await supabase
         .from('map_recordings')
-        .select('*')
+        .select('*, species:species_id(common_name, scientific_name, taxon)')
         .order('created_at', { ascending: false })
         .limit(500);
       return data || [];
@@ -81,11 +81,14 @@ export default function AdminRecordings() {
                 {recordings.map(rec => (
                   <tr key={rec.id} className="border-b border-border/50 hover:bg-muted/30 transition-colors">
                     <td className="p-3">
-                      <p className="font-medium text-primary">{rec.species_name}</p>
-                      {rec.scientific_name && <p className="text-xs italic text-muted-foreground">{rec.scientific_name}</p>}
+                      <p className="font-medium text-primary">{rec.species?.common_name || rec.species_name || '—'}</p>
+                      {rec.species?.scientific_name && <p className="text-xs italic text-muted-foreground">{rec.species.scientific_name}</p>}
                     </td>
                     <td className="p-3">
-                      <Badge variant="outline" className="text-xs">{taxonLabels[rec.taxon] || rec.taxon}</Badge>
+                      {(() => {
+                        const taxon = rec.species?.taxon || rec.taxon;
+                        return taxon ? <Badge variant="outline" className="text-xs">{taxonLabels[taxon] || taxon}</Badge> : '—';
+                      })()}
                     </td>
                     <td className="p-3 hidden md:table-cell text-muted-foreground text-xs">{rec.location_name || '—'}</td>
                     <td className="p-3 hidden sm:table-cell font-mono text-xs text-muted-foreground">

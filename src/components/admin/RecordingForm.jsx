@@ -110,6 +110,9 @@ export default function RecordingForm({ recording, onClose }) {
       queryClient.invalidateQueries({ queryKey: ['map-recordings'] });
       onClose();
     },
+    onError: (err) => {
+      alert('Error al guardar: ' + (err?.message || 'Por favor intenta de nuevo'));
+    },
   });
 
   const handleFileUpload = async (e) => {
