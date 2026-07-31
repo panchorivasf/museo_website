@@ -161,7 +161,12 @@ export default function SpeciesDetail() {
           {species.image_url && (
             <div>
               <div className="rounded-xl overflow-hidden aspect-[16/9] bg-muted">
-                <img src={species.image_url} alt={species.common_name} className="w-full h-full object-cover" />
+                <img
+                  src={species.image_url}
+                  alt={species.common_name}
+                  className="w-full h-full object-cover"
+                  style={{ objectPosition: `50% ${species.image_position_y ?? 50}%` }}
+                />
               </div>
               {species.image_author && (
                 <p className="text-xs text-muted-foreground mt-1.5 px-1">

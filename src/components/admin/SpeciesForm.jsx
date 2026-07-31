@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
+import { Slider } from '@/components/ui/slider';
 import { X, Upload, Loader2, Map, BadgeCheck, AlertTriangle } from 'lucide-react';
 import LocationPicker from './LocationPicker';
 import RecordistSelect from './RecordistSelect';
@@ -73,6 +74,7 @@ export default function SpeciesForm({ species, onClose }) {
     audio_url: species?.audio_url || '',
     audio_original_name: species?.audio_original_name || '',
     image_url: species?.image_url || '',
+    image_position_y: species?.image_position_y ?? 50,
     habitat: species?.habitat || '',
     frequency_range: species?.frequency_range || '',
     frequency_min: species?.frequency_min ?? 0,
@@ -88,7 +90,7 @@ export default function SpeciesForm({ species, onClose }) {
     featured: species?.featured || false,
   });
 
-  const numericFields = ['frequency_min', 'frequency_max', 'spectrogram_min', 'spectrogram_max', 'fft_size', 'recording_latitude', 'recording_longitude'];
+  const numericFields = ['frequency_min', 'frequency_max', 'spectrogram_min', 'spectrogram_max', 'fft_size', 'recording_latitude', 'recording_longitude', 'image_position_y'];
 
   const mutation = useMutation({
     mutationFn: async (rawData) => {
@@ -347,7 +349,27 @@ export default function SpeciesForm({ species, onClose }) {
           <div className="space-y-1.5">
             <Label>Imagen de la especie</Label>
             {form.image_url && (
-              <img src={form.image_url} alt="" className="w-full h-32 object-cover rounded-lg mb-2" />
+              <div className="space-y-1.5 mb-2">
+                <p className="text-xs text-muted-foreground">Vista previa (como se ve en la página de la especie)</p>
+                <div className="rounded-xl overflow-hidden aspect-[16/9] bg-muted">
+                  <img
+                    src={form.image_url}
+                    alt=""
+                    className="w-full h-full object-cover"
+                    style={{ objectPosition: `50% ${form.image_position_y}%` }}
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <Label className="text-xs whitespace-nowrap">Posición vertical</Label>
+                  <Slider
+                    value={[Number(form.image_position_y)]}
+                    onValueChange={([v]) => update('image_position_y', v)}
+                    min={0} max={100} step={1}
+                    className="flex-1"
+                  />
+                  <span className="text-xs text-muted-foreground w-8 text-right">{form.image_position_y}%</span>
+                </div>
+              </div>
             )}
             <label className="flex items-center gap-2 px-3 py-2 bg-muted rounded-lg cursor-pointer hover:bg-muted/80 transition-colors text-sm w-fit">
               <Upload className="w-4 h-4" />
