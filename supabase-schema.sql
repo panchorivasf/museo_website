@@ -67,3 +67,32 @@ create policy "Auth update map_recordings"
 
 create policy "Auth delete map_recordings"
   on map_recordings for delete using (auth.role() = 'authenticated');
+
+-- Blog
+create table if not exists blog_posts (
+  id uuid primary key default gen_random_uuid(),
+  title text not null,
+  subtitle text,
+  slug text unique not null,
+  cover_image_url text,
+  content jsonb not null default '[]',
+  published boolean not null default false,
+  created_at timestamptz default now()
+);
+
+alter table blog_posts enable row level security;
+
+create policy "Public read published blog_posts"
+  on blog_posts for select using (published = true);
+
+create policy "Auth read all blog_posts"
+  on blog_posts for select using (auth.role() = 'authenticated');
+
+create policy "Auth insert blog_posts"
+  on blog_posts for insert with check (auth.role() = 'authenticated');
+
+create policy "Auth update blog_posts"
+  on blog_posts for update using (auth.role() = 'authenticated');
+
+create policy "Auth delete blog_posts"
+  on blog_posts for delete using (auth.role() = 'authenticated');
