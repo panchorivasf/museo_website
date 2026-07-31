@@ -162,17 +162,6 @@ function RecordingPopup({ recording }) {
             frequencyMin={recording.spectrogram_min ?? recording.frequency_min}
             frequencyMax={recording.spectrogram_max ?? recording.frequency_max}
           />
-          {recording.location_name && (
-            <div style={{
-              position: 'absolute', top: '4px', right: '5px',
-              fontSize: '9px', color: 'rgba(255,255,255,0.8)',
-              background: 'rgba(0,0,0,0.4)', padding: '1px 4px', borderRadius: '3px',
-              pointerEvents: 'none', maxWidth: '160px',
-              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-            }}>
-              📍 {recording.location_name}
-            </div>
-          )}
         </div>
       )}
     </div>
