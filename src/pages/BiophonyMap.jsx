@@ -79,7 +79,6 @@ function RecordingPopup({ recording }) {
             <button
               type="button"
               title="Ver información de la grabación"
-              onMouseEnter={() => setShowInfo(true)}
               onClick={() => setShowInfo(v => !v)}
               style={{
                 position: 'absolute', top: '5px', left: '5px',
@@ -110,7 +109,6 @@ function RecordingPopup({ recording }) {
             <button
               type="button"
               title="Ver información de la grabación"
-              onMouseEnter={() => setShowInfo(true)}
               onClick={() => setShowInfo(v => !v)}
               style={{
                 width: '18px', height: '18px', borderRadius: '50%',
@@ -140,7 +138,6 @@ function RecordingPopup({ recording }) {
       {/* Recording metadata panel, toggled via the info icon */}
       {showInfo && hasMetadata && (
         <div
-          onMouseLeave={() => setShowInfo(false)}
           style={{
             fontSize: '10.5px', color: '#444', background: '#f4f4f2',
             border: '1px solid #e2e2df', borderRadius: '6px',
