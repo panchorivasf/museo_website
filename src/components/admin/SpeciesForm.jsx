@@ -171,7 +171,8 @@ export default function SpeciesForm({ species, onClose }) {
             <Label>Nombre común *</Label>
             <Input
               value={form.common_name}
-              autoComplete="off"
+              name="species-common-name-nofill"
+              autoComplete="chrome-off-nope"
               list="existing-common-names"
               onChange={e => {
                 const value = e.target.value;
@@ -197,7 +198,8 @@ export default function SpeciesForm({ species, onClose }) {
             <Label>Nombre científico *</Label>
             <Input
               value={form.scientific_name}
-              autoComplete="off"
+              name="species-scientific-name-nofill"
+              autoComplete="chrome-off-nope"
               list="existing-scientific-names"
               onChange={e => {
                 const value = e.target.value;
