@@ -216,6 +216,9 @@ export default function SpeciesForm({ species, onClose }) {
               id="sp-field-a1"
               autoComplete="new-password"
               list="existing-common-names"
+              ref={el => { if (el && !el.dataset.roInit) { el.readOnly = true; el.dataset.roInit = '1'; } }}
+              onFocus={e => { e.target.removeAttribute('readonly'); }}
+              onBlur={e => { e.target.setAttribute('readonly', 'readonly'); }}
               onChange={e => {
                 const value = e.target.value;
                 const match = !isEditing && existingSpecies.find(s => s.common_name === value);
@@ -244,6 +247,9 @@ export default function SpeciesForm({ species, onClose }) {
               id="sp-field-a2"
               autoComplete="new-password"
               list="existing-scientific-names"
+              ref={el => { if (el && !el.dataset.roInit) { el.readOnly = true; el.dataset.roInit = '1'; } }}
+              onFocus={e => { e.target.removeAttribute('readonly'); }}
+              onBlur={e => { e.target.setAttribute('readonly', 'readonly'); }}
               onChange={e => {
                 const value = e.target.value;
                 setGbifResult(null);
