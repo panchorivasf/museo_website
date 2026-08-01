@@ -97,3 +97,39 @@ create policy "Auth update blog_posts"
 
 create policy "Auth delete blog_posts"
   on blog_posts for delete using (auth.role() = 'authenticated');
+
+grant select on table blog_posts to anon;
+grant select, insert, update, delete on table blog_posts to authenticated;
+
+-- Conceptos (bioacoustics theory/concept articles, same shape as blog_posts)
+create table if not exists concepts (
+  id uuid primary key default gen_random_uuid(),
+  title text not null,
+  subtitle text,
+  author_name text,
+  slug text unique not null,
+  cover_image_url text,
+  content jsonb not null default '[]',
+  published boolean not null default false,
+  created_at timestamptz default now()
+);
+
+alter table concepts enable row level security;
+
+create policy "Public read published concepts"
+  on concepts for select using (published = true);
+
+create policy "Auth read all concepts"
+  on concepts for select using (auth.role() = 'authenticated');
+
+create policy "Auth insert concepts"
+  on concepts for insert with check (auth.role() = 'authenticated');
+
+create policy "Auth update concepts"
+  on concepts for update using (auth.role() = 'authenticated');
+
+create policy "Auth delete concepts"
+  on concepts for delete using (auth.role() = 'authenticated');
+
+grant select on table concepts to anon;
+grant select, insert, update, delete on table concepts to authenticated;

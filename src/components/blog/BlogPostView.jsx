@@ -11,6 +11,12 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
 });
 
+export function extractYoutubeId(url) {
+  if (!url) return null;
+  const match = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+  return match ? match[1] : null;
+}
+
 function FitBounds({ points }) {
   const map = useMap();
   useEffect(() => {
@@ -55,6 +61,22 @@ export function BlockRenderer({ block }) {
           spectrogramMin={block.spectrogramMin}
           spectrogramMax={block.spectrogramMax}
           altText={block.title || 'Espectrograma'}
+        />
+      </div>
+    );
+  }
+
+  if (block.type === 'youtube') {
+    const videoId = extractYoutubeId(block.url);
+    if (!videoId) return null;
+    return (
+      <div className="rounded-xl overflow-hidden border border-border aspect-video">
+        <iframe
+          className="w-full h-full"
+          src={`https://www.youtube.com/embed/${videoId}`}
+          title={block.title || 'Video de YouTube'}
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+          allowFullScreen
         />
       </div>
     );

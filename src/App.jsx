@@ -22,10 +22,13 @@ import BiophonyMap from '@/pages/BiophonyMap';
 import About from '@/pages/About';
 import Blog from '@/pages/Blog';
 import BlogPost from '@/pages/BlogPost';
+import Concepts from '@/pages/Concepts';
+import ConceptDetail from '@/pages/ConceptDetail';
 import AdminLayout from '@/pages/admin/AdminLayout';
 import AdminSpecies from '@/pages/admin/AdminSpecies';
 import AdminRecordings from '@/pages/admin/AdminRecordings';
 import AdminBlog from '@/pages/admin/AdminBlog';
+import AdminConcepts from '@/pages/admin/AdminConcepts';
 
 const AppRoutes = () => {
   const { isLoadingAuth } = useAuth();
@@ -48,6 +51,8 @@ const AppRoutes = () => {
         <Route path="/nosotros" element={<About />} />
         <Route path="/blog" element={<Blog />} />
         <Route path="/blog/:slug" element={<BlogPost />} />
+        <Route path="/conceptos" element={<Concepts />} />
+        <Route path="/conceptos/:slug" element={<ConceptDetail />} />
       </Route>
 
       <Route path="/login" element={<Login />} />
@@ -62,6 +67,7 @@ const AppRoutes = () => {
           <Route path="/admin" element={<AdminSpecies />} />
           <Route path="/admin/grabaciones" element={<AdminRecordings />} />
           <Route path="/admin/blog" element={<AdminBlog />} />
+          <Route path="/admin/conceptos" element={<AdminConcepts />} />
         </Route>
       </Route>
 
