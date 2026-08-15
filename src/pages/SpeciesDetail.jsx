@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/api/supabaseClient';
 import { Link, useParams } from 'react-router-dom';
-import { ArrowLeft, MapPin, Calendar, User, Info, Share2, Copy, Code, ChevronDown } from 'lucide-react';
+import { ArrowLeft, MapPin, Calendar, User, Info, Share2, Copy, Code, ChevronDown, BookOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import SpectrogramPlayer from '@/components/audio/SpectrogramPlayer';
@@ -22,6 +22,13 @@ const conservationLabels = {
   LC: 'Preocupación Menor', NT: 'Casi Amenazada', VU: 'Vulnerable',
   EN: 'En Peligro', CR: 'En Peligro Crítico', EW: 'Extinta en Estado Silvestre',
   EX: 'Extinta', DD: 'Datos Insuficientes', NE: 'No Evaluada',
+};
+
+// Show a DOI as "DOI: 10.xxxx/yyy" and any other link as its bare URL, so long
+// citation links stay readable instead of dumping the full https:// string.
+const referenceLinkLabel = (url) => {
+  const clean = url.replace(/^https?:\/\//, '').replace(/^www\./, '');
+  return clean.startsWith('doi.org/') ? `DOI: ${clean.slice('doi.org/'.length)}` : clean;
 };
 
 const conservationColors = {
@@ -352,6 +359,38 @@ export default function SpeciesDetail() {
           </div>
         </div>
       </div>
+
+      {Array.isArray(species.references) && species.references.length > 0 && (
+        <div className="mt-8 bg-card rounded-xl border border-border p-6">
+          <h3 className="text-xs font-heading uppercase tracking-widest text-muted-foreground font-semibold mb-4 flex items-center gap-2">
+            <BookOpen className="w-3.5 h-3.5 text-secondary" />
+            Referencias
+          </h3>
+          <ol className="space-y-3">
+            {species.references.map((ref, i) => (
+              <li key={i} className="flex gap-3 text-sm text-muted-foreground leading-relaxed">
+                <span className="font-mono text-xs text-secondary shrink-0 pt-0.5">[{i + 1}]</span>
+                <span className="min-w-0">
+                  {ref.citation}
+                  {ref.url && (
+                    <>
+                      {' '}
+                      <a
+                        href={ref.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-secondary underline underline-offset-2 hover:text-primary break-words"
+                      >
+                        {referenceLinkLabel(ref.url)}
+                      </a>
+                    </>
+                  )}
+                </span>
+              </li>
+            ))}
+          </ol>
+        </div>
+      )}
     </div>
   );
 }

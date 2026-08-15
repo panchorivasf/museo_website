@@ -20,8 +20,15 @@ create table if not exists species (
   recording_date text,
   recordist text,
   featured boolean default false,
+  -- Bibliographic references shown as an appendix on the species page.
+  -- Array of { "citation": text, "url": text|null }. "references" is a reserved
+  -- word in SQL, so it must always be double-quoted here (same as "order" above).
+  "references" jsonb not null default '[]',
   created_at timestamptz default now()
 );
+
+-- Migration for databases created before the references column existed
+alter table species add column if not exists "references" jsonb not null default '[]';
 
 -- Map recordings table
 create table if not exists map_recordings (
