@@ -40,12 +40,11 @@ const inlineMarkdownComponents = {
   ),
 };
 
-// Show a DOI as "DOI: 10.xxxx/yyy" and any other link as its bare URL, so long
-// citation links stay readable instead of dumping the full https:// string.
-const referenceLinkLabel = (url) => {
-  const clean = url.replace(/^https?:\/\//, '').replace(/^www\./, '');
-  return clean.startsWith('doi.org/') ? `DOI: ${clean.slice('doi.org/'.length)}` : clean;
-};
+// Pull the bare identifier out of a doi.org link (null for any other URL). The
+// link itself reads "Ver artículo" for a general audience; the DOI is shown after
+// it in small grey type, where it stays available to academic readers as the
+// citation's permanent identifier without becoming the visible call to action.
+const doiFromUrl = (url) => url.match(/^https?:\/\/(?:dx\.)?doi\.org\/(10\.\S+)$/i)?.[1] || null;
 
 const conservationColors = {
   LC: 'bg-green-100 text-green-800', NT: 'bg-yellow-100 text-yellow-800',
@@ -383,29 +382,37 @@ export default function SpeciesDetail() {
             Referencias
           </h3>
           <ol className="space-y-3">
-            {species.references.map((ref, i) => (
-              <li key={i} className="flex gap-3 text-sm text-muted-foreground leading-relaxed">
-                <span className="font-mono text-xs text-secondary shrink-0 pt-0.5">[{i + 1}]</span>
-                <span className="min-w-0">
-                  <ReactMarkdown components={inlineMarkdownComponents}>
-                    {ref.citation}
-                  </ReactMarkdown>
-                  {ref.url && (
-                    <>
-                      {' '}
-                      <a
-                        href={ref.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-secondary underline underline-offset-2 hover:text-primary break-words"
-                      >
-                        {referenceLinkLabel(ref.url)}
-                      </a>
-                    </>
-                  )}
-                </span>
-              </li>
-            ))}
+            {species.references.map((ref, i) => {
+              const doi = ref.url ? doiFromUrl(ref.url) : null;
+              return (
+                <li key={i} className="flex gap-3 text-sm text-muted-foreground leading-relaxed">
+                  <span className="font-mono text-xs text-secondary shrink-0 pt-0.5">[{i + 1}]</span>
+                  <span className="min-w-0">
+                    <ReactMarkdown components={inlineMarkdownComponents}>
+                      {ref.citation}
+                    </ReactMarkdown>
+                    {ref.url && (
+                      <>
+                        {' '}
+                        <a
+                          href={ref.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-secondary underline underline-offset-2 hover:text-primary break-words"
+                        >
+                          {ref.url_label || 'Ver artículo'}
+                        </a>
+                      </>
+                    )}
+                    {doi && (
+                      <span className="ml-1.5 font-mono text-xs text-muted-foreground/70 break-all">
+                        doi:{doi}
+                      </span>
+                    )}
+                  </span>
+                </li>
+              );
+            })}
           </ol>
         </div>
       )}

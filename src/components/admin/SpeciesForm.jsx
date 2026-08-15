@@ -103,7 +103,11 @@ export default function SpeciesForm({ species, onClose }) {
       // Drop half-filled reference rows and normalise blank URLs to null
       data.references = (data.references || [])
         .filter(r => r.citation?.trim())
-        .map(r => ({ citation: r.citation.trim(), url: r.url?.trim() || null }));
+        .map(r => ({
+          citation: r.citation.trim(),
+          url: r.url?.trim() || null,
+          url_label: r.url_label?.trim() || null,
+        }));
       let speciesId = species?.id;
       if (isEditing) {
         const { error } = await supabase.from('species').update(data).eq('id', species.id);
@@ -179,7 +183,7 @@ export default function SpeciesForm({ species, onClose }) {
   const update = (field, value) => setForm(prev => ({ ...prev, [field]: value }));
 
   const addReference = () =>
-    setForm(prev => ({ ...prev, references: [...prev.references, { citation: '', url: '' }] }));
+    setForm(prev => ({ ...prev, references: [...prev.references, { citation: '', url_label: '', url: '' }] }));
   const updateReference = (index, field, value) =>
     setForm(prev => ({
       ...prev,
@@ -401,11 +405,18 @@ export default function SpeciesForm({ species, onClose }) {
                     rows={2}
                     placeholder="Apellido, N. (2020). Título del artículo. Revista, 12(3), 45–67."
                   />
-                  <Input
-                    value={ref.url || ''}
-                    onChange={e => updateReference(i, 'url', e.target.value)}
-                    placeholder="https://doi.org/10.xxxx/xxxxx (opcional)"
-                  />
+                  <div className="grid grid-cols-1 sm:grid-cols-[1fr_2fr] gap-1.5">
+                    <Input
+                      value={ref.url_label || ''}
+                      onChange={e => updateReference(i, 'url_label', e.target.value)}
+                      placeholder="Nombre del enlace (por defecto: Ver artículo)"
+                    />
+                    <Input
+                      value={ref.url || ''}
+                      onChange={e => updateReference(i, 'url', e.target.value)}
+                      placeholder="https://doi.org/10.xxxx/xxxxx"
+                    />
+                  </div>
                 </div>
                 <div className="flex flex-col shrink-0">
                   <Button
