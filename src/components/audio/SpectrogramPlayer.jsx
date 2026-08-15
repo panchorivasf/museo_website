@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
-import { Play, Pause, SkipBack, Volume2, VolumeX, Gauge } from 'lucide-react';
+import { Play, Pause, SkipBack, Volume2, VolumeX, Gauge, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 
@@ -486,6 +486,17 @@ export default function SpectrogramPlayer({ audioUrl, altText, spectrogramMin, s
             <Gauge className="w-4 h-4 text-muted-foreground shrink-0" />
             <span className="text-xs font-mono text-muted-foreground w-28 shrink-0">{speedLabel}</span>
             <Slider value={[playbackRate]} onValueChange={([v]) => setPlaybackRate(Math.round(v * 100) / 100)} min={0.1} max={2} step={0.05} className="flex-1" aria-label="Velocidad de reproducción" />
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setPlaybackRate(1)}
+              disabled={playbackRate === 1}
+              className="h-8 w-8 shrink-0 text-muted-foreground hover:text-primary disabled:opacity-30"
+              title="Restablecer velocidad a 1×"
+              aria-label="Restablecer velocidad a 1×"
+            >
+              <RotateCcw className="w-4 h-4" />
+            </Button>
           </div>
           <div className="flex items-center gap-2">
             <Button variant="ghost" size="icon" onClick={() => setMuted(!muted)} className="h-8 w-8 text-muted-foreground" aria-label={muted ? 'Activar sonido' : 'Silenciar'}>
