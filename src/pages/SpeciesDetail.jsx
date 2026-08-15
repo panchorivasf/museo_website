@@ -24,6 +24,22 @@ const conservationLabels = {
   EX: 'Extinta', DD: 'Datos Insuficientes', NE: 'No Evaluada',
 };
 
+// Render a citation's Markdown inline: unwrap the paragraph ReactMarkdown would
+// otherwise emit, so the [n] marker, the citation and the DOI link stay on one flow.
+const inlineMarkdownComponents = {
+  p: ({ children }) => <>{children}</>,
+  a: ({ children, href }) => (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="text-secondary underline underline-offset-2 hover:text-primary break-words"
+    >
+      {children}
+    </a>
+  ),
+};
+
 // Show a DOI as "DOI: 10.xxxx/yyy" and any other link as its bare URL, so long
 // citation links stay readable instead of dumping the full https:// string.
 const referenceLinkLabel = (url) => {
@@ -323,7 +339,7 @@ export default function SpeciesDetail() {
 
           {species.habitat && (
             <div className="bg-card rounded-xl border border-border p-5">
-              <h3 className="text-xs font-heading uppercase tracking-widest text-muted-foreground font-semibold mb-3">Hábitat</h3>
+              <h3 className="text-xs font-heading uppercase tracking-widest text-muted-foreground font-semibold mb-3">Hábitat y Distribución</h3>
               <ReactMarkdown className="text-sm text-muted-foreground leading-relaxed prose prose-sm max-w-none prose-p:my-1">{species.habitat}</ReactMarkdown>
             </div>
           )}
@@ -371,7 +387,9 @@ export default function SpeciesDetail() {
               <li key={i} className="flex gap-3 text-sm text-muted-foreground leading-relaxed">
                 <span className="font-mono text-xs text-secondary shrink-0 pt-0.5">[{i + 1}]</span>
                 <span className="min-w-0">
-                  {ref.citation}
+                  <ReactMarkdown components={inlineMarkdownComponents}>
+                    {ref.citation}
+                  </ReactMarkdown>
                   {ref.url && (
                     <>
                       {' '}

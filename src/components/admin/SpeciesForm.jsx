@@ -371,8 +371,68 @@ export default function SpeciesForm({ species, onClose }) {
           <Textarea value={form.sound_description} onChange={e => update('sound_description', e.target.value)} rows={3} />
         </div>
         <div className="space-y-1.5">
-          <Label>Hábitat</Label>
+          <Label>Hábitat y Distribución</Label>
           <Textarea value={form.habitat} onChange={e => update('habitat', e.target.value)} rows={2} />
+        </div>
+
+        <div className="border border-border rounded-lg p-4 space-y-3">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <p className="text-xs font-heading uppercase tracking-widest text-muted-foreground font-semibold">Referencias</p>
+            <Button type="button" variant="outline" size="sm" onClick={addReference} className="h-7 gap-1.5 text-xs">
+              <Plus className="w-3 h-3" /> Añadir referencia
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Admite Markdown: <code className="font-mono">*cursiva*</code> para nombres científicos y títulos de revistas,
+            <code className="font-mono"> **negrita**</code>, y <code className="font-mono">[texto](url)</code> para enlaces.
+          </p>
+          {form.references.length === 0 ? (
+            <p className="text-xs text-muted-foreground">
+              Sin referencias. Añade las citas de artículos o libros en que se basa esta ficha; aparecerán como apéndice al final de la página de la especie.
+            </p>
+          ) : (
+            form.references.map((ref, i) => (
+              <div key={i} className="flex gap-2 items-start">
+                <span className="text-xs font-mono text-muted-foreground w-5 shrink-0 text-right pt-2.5">{i + 1}.</span>
+                <div className="flex-1 space-y-1.5 min-w-0">
+                  <Textarea
+                    value={ref.citation}
+                    onChange={e => updateReference(i, 'citation', e.target.value)}
+                    rows={2}
+                    placeholder="Apellido, N. (2020). Título del artículo. Revista, 12(3), 45–67."
+                  />
+                  <Input
+                    value={ref.url || ''}
+                    onChange={e => updateReference(i, 'url', e.target.value)}
+                    placeholder="https://doi.org/10.xxxx/xxxxx (opcional)"
+                  />
+                </div>
+                <div className="flex flex-col shrink-0">
+                  <Button
+                    type="button" variant="ghost" size="icon"
+                    onClick={() => moveReference(i, -1)} disabled={i === 0}
+                    className="h-6 w-8 text-muted-foreground disabled:opacity-30" aria-label="Subir referencia"
+                  >
+                    <ChevronUp className="w-3.5 h-3.5" />
+                  </Button>
+                  <Button
+                    type="button" variant="ghost" size="icon"
+                    onClick={() => moveReference(i, 1)} disabled={i === form.references.length - 1}
+                    className="h-6 w-8 text-muted-foreground disabled:opacity-30" aria-label="Bajar referencia"
+                  >
+                    <ChevronDown className="w-3.5 h-3.5" />
+                  </Button>
+                  <Button
+                    type="button" variant="ghost" size="icon"
+                    onClick={() => removeReference(i)}
+                    className="h-6 w-8 text-muted-foreground hover:text-destructive" aria-label="Eliminar referencia"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </Button>
+                </div>
+              </div>
+            ))
+          )}
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -547,62 +607,6 @@ export default function SpeciesForm({ species, onClose }) {
             update('recording_longitude', lng.toFixed(6));
           }}
         />
-
-        <div className="border border-border rounded-lg p-4 space-y-3">
-          <div className="flex items-center justify-between gap-2 flex-wrap">
-            <p className="text-xs font-heading uppercase tracking-widest text-muted-foreground font-semibold">Referencias</p>
-            <Button type="button" variant="outline" size="sm" onClick={addReference} className="h-7 gap-1.5 text-xs">
-              <Plus className="w-3 h-3" /> Añadir referencia
-            </Button>
-          </div>
-          {form.references.length === 0 ? (
-            <p className="text-xs text-muted-foreground">
-              Sin referencias. Añade las citas de artículos o libros en que se basa esta ficha; aparecerán como apéndice al final de la página de la especie.
-            </p>
-          ) : (
-            form.references.map((ref, i) => (
-              <div key={i} className="flex gap-2 items-start">
-                <span className="text-xs font-mono text-muted-foreground w-5 shrink-0 text-right pt-2.5">{i + 1}.</span>
-                <div className="flex-1 space-y-1.5 min-w-0">
-                  <Textarea
-                    value={ref.citation}
-                    onChange={e => updateReference(i, 'citation', e.target.value)}
-                    rows={2}
-                    placeholder="Apellido, N. (2020). Título del artículo. Revista, 12(3), 45–67."
-                  />
-                  <Input
-                    value={ref.url || ''}
-                    onChange={e => updateReference(i, 'url', e.target.value)}
-                    placeholder="https://doi.org/10.xxxx/xxxxx (opcional)"
-                  />
-                </div>
-                <div className="flex flex-col shrink-0">
-                  <Button
-                    type="button" variant="ghost" size="icon"
-                    onClick={() => moveReference(i, -1)} disabled={i === 0}
-                    className="h-6 w-8 text-muted-foreground disabled:opacity-30" aria-label="Subir referencia"
-                  >
-                    <ChevronUp className="w-3.5 h-3.5" />
-                  </Button>
-                  <Button
-                    type="button" variant="ghost" size="icon"
-                    onClick={() => moveReference(i, 1)} disabled={i === form.references.length - 1}
-                    className="h-6 w-8 text-muted-foreground disabled:opacity-30" aria-label="Bajar referencia"
-                  >
-                    <ChevronDown className="w-3.5 h-3.5" />
-                  </Button>
-                  <Button
-                    type="button" variant="ghost" size="icon"
-                    onClick={() => removeReference(i)}
-                    className="h-6 w-8 text-muted-foreground hover:text-destructive" aria-label="Eliminar referencia"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </Button>
-                </div>
-              </div>
-            ))
-          )}
-        </div>
 
         <div className="flex items-center gap-3">
           <Switch checked={form.featured} onCheckedChange={v => update('featured', v)} />
