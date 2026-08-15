@@ -17,7 +17,8 @@
         "insectos",
         "anfibios",
         "mamiferos_marinos",
-        "mamiferos_terrestres"
+        "mamiferos_terrestres",
+        "felinos"
       ],
       "description": "Grupo taxon\u00f3mico"
     },

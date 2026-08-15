@@ -39,6 +39,8 @@
     --ocher-foreground: 0 0% 100%;
     --teal: 186 85% 29%;
     --teal-foreground: 0 0% 100%;
+    --rust: 20 65% 42%;
+    --rust-foreground: 0 0% 100%;
     --sidebar-background: 183 82% 18%;
     --sidebar-foreground: 100 20% 98.5%;
     --sidebar-primary: 186 85% 29%;
@@ -78,6 +80,8 @@
     --ocher-foreground: 183 82% 12%;
     --teal: 186 85% 40%;
     --teal-foreground: 0 0% 100%;
+    --rust: 20 70% 55%;
+    --rust-foreground: 183 82% 12%;
     --sidebar-background: 183 60% 8%;
     --sidebar-foreground: 100 20% 95%;
     --sidebar-primary: 163 33% 51%;

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Bird, Bug, Rat } from 'lucide-react';
+import { Bird, Bug, Rat, Cat } from 'lucide-react';
 import { WhaleTail, Frog } from '@/components/icons/TaxonIcons';
 import { Button } from '@/components/ui/button';
 
@@ -10,6 +10,7 @@ const taxa = [
   { key: 'anfibios', label: 'Anfibios', icon: Frog },
   { key: 'cetaceos', label: 'Cetáceos', icon: WhaleTail },
   { key: 'mamiferos_terrestres', label: 'Roedores', icon: Rat },
+  { key: 'felinos', label: 'Felinos', icon: Cat },
 ];
 
 export default function TaxonFilter({ selected, onChange }) {

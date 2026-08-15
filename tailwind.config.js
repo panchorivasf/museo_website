@@ -51,6 +51,10 @@ module.exports = {
   				DEFAULT: 'hsl(var(--teal))',
   				foreground: 'hsl(var(--teal-foreground))'
   			},
+  			rust: {
+  				DEFAULT: 'hsl(var(--rust))',
+  				foreground: 'hsl(var(--rust-foreground))'
+  			},
   			chart: {
   				'1': 'hsl(var(--chart-1))',
   				'2': 'hsl(var(--chart-2))',

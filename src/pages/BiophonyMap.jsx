@@ -4,7 +4,7 @@ import { supabase } from '@/api/supabaseClient';
 import { MapContainer, TileLayer, Marker, Popup, Tooltip, useMap } from 'react-leaflet';
 import MarkerClusterGroup from 'react-leaflet-cluster';
 import L from 'leaflet';
-import { Bird, Bug, Rat, Info } from 'lucide-react';
+import { Bird, Bug, Rat, Cat, Info } from 'lucide-react';
 import { WhaleTail, Frog } from '@/components/icons/TaxonIcons';
 import MiniSpectrogram, { stopActiveMiniSpectrogram } from '@/components/audio/MiniSpectrogram';
 import { Button } from '@/components/ui/button';
@@ -18,6 +18,7 @@ const taxonConfig = {
   anfibios: { label: 'Anfibios', icon: Frog, color: '#5AAA95' },
   cetaceos: { label: 'Cetáceos', icon: WhaleTail, color: '#095256' },
   mamiferos_terrestres: { label: 'Roedores', icon: Rat, color: '#BB9F06' },
+  felinos: { label: 'Felinos', icon: Cat, color: '#B15425' },
 };
 
 function createIcon(color) {

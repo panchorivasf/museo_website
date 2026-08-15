@@ -21,6 +21,7 @@ const taxonOptions = [
   { value: 'anfibios', label: 'Anfibios' },
   { value: 'cetaceos', label: 'Cetáceos' },
   { value: 'mamiferos_terrestres', label: 'Roedores' },
+  { value: 'felinos', label: 'Felinos' },
 ];
 
 const conservationOptions = [

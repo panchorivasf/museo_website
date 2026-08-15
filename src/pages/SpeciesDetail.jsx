@@ -15,6 +15,7 @@ const taxonLabels = {
   anfibios: 'Anfibios',
   cetaceos: 'Cetáceos',
   mamiferos_terrestres: 'Roedores',
+  felinos: 'Felinos',
 };
 
 const conservationLabels = {

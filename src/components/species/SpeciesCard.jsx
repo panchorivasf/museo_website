@@ -9,6 +9,7 @@ const taxonLabels = {
   anfibios: 'Anfibios',
   cetaceos: 'Cetáceos',
   mamiferos_terrestres: 'Roedores',
+  felinos: 'Felinos',
 };
 
 const taxonColors = {
@@ -17,6 +18,7 @@ const taxonColors = {
   anfibios: 'bg-secondary text-secondary-foreground',
   cetaceos: 'bg-primary text-primary-foreground',
   mamiferos_terrestres: 'bg-ocher text-ocher-foreground',
+  felinos: 'bg-rust text-rust-foreground',
 };
 
 function prefetchAudio(url) {

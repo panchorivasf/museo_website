@@ -12,7 +12,7 @@ import {
 
 const taxonLabels = {
   aves: 'Aves', insectos: 'Insectos', anfibios: 'Anfibios',
-  cetaceos: 'Cetáceos', mamiferos_terrestres: 'Roedores',
+  cetaceos: 'Cetáceos', mamiferos_terrestres: 'Roedores', felinos: 'Felinos',
 };
 
 export default function AdminSpecies() {
