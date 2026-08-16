@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Plus, Pencil, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import ArticleForm from './ArticleForm';
+import { scrollToTop } from '@/lib/utils';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -55,6 +56,7 @@ export default function AdminArticleList({
     const { data } = await supabase.from(table).select('*').eq('id', postLite.id).single();
     setEditing(data);
     setShowForm(true);
+    scrollToTop();
   };
   const handleClose = () => { setShowForm(false); setEditing(null); };
 

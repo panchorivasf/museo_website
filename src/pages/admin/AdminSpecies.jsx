@@ -1,10 +1,13 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/api/supabaseClient';
 import { Button } from '@/components/ui/button';
-import { Plus, Pencil, Trash2 } from 'lucide-react';
+import { Plus, Pencil, Trash2, Search, X } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import SpeciesForm from '@/components/admin/SpeciesForm';
+import { scrollToTop } from '@/lib/utils';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -15,10 +18,18 @@ const taxonLabels = {
   cetaceos: 'Cetáceos', mamiferos_terrestres: 'Roedores', felinos: 'Felinos',
 };
 
+const normalize = (value) => (value || '')
+  .toString()
+  .toLowerCase()
+  .normalize('NFD')
+  .replace(/\p{Diacritic}/gu, '');
+
 export default function AdminSpecies() {
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [search, setSearch] = useState('');
+  const [taxonFilter, setTaxonFilter] = useState('all');
   const queryClient = useQueryClient();
 
   const { data: species = [], isLoading } = useQuery({
@@ -44,15 +55,29 @@ export default function AdminSpecies() {
     },
   });
 
-  const handleEdit = (sp) => { setEditing(sp); setShowForm(true); };
+  const handleEdit = (sp) => { setEditing(sp); setShowForm(true); scrollToTop(); };
   const handleClose = () => { setShowForm(false); setEditing(null); };
+
+  const filtered = useMemo(() => {
+    const term = normalize(search).trim();
+    return species.filter(sp => {
+      if (taxonFilter !== 'all' && sp.taxon !== taxonFilter) return false;
+      if (!term) return true;
+      return [sp.common_name, sp.scientific_name, sp.genus, sp.family, sp.order]
+        .some(field => normalize(field).includes(term));
+    });
+  }, [species, search, taxonFilter]);
+
+  const isFiltering = search.trim() !== '' || taxonFilter !== 'all';
 
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
           <h2 className="text-2xl font-display font-bold text-primary">Especies</h2>
-          <p className="text-sm text-muted-foreground">{species.length} registro(s)</p>
+          <p className="text-sm text-muted-foreground">
+            {isFiltering ? `${filtered.length} de ${species.length} registro(s)` : `${species.length} registro(s)`}
+          </p>
         </div>
         <Button onClick={() => { setEditing(null); setShowForm(true); }} className="bg-secondary hover:bg-secondary/90">
           <Plus className="w-4 h-4 mr-2" /> Agregar Especie
@@ -60,6 +85,37 @@ export default function AdminSpecies() {
       </div>
 
       {showForm && <SpeciesForm species={editing} onClose={handleClose} />}
+
+      <div className="flex flex-col sm:flex-row gap-2 mb-4">
+        <div className="relative flex-1">
+          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+          <Input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Buscar por nombre común, científico, género, familia u orden..."
+            className="pl-9 pr-9"
+          />
+          {search && (
+            <button
+              type="button"
+              onClick={() => setSearch('')}
+              aria-label="Limpiar búsqueda"
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded text-muted-foreground hover:text-primary"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
+        <Select value={taxonFilter} onValueChange={setTaxonFilter}>
+          <SelectTrigger className="sm:w-48"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos los taxones</SelectItem>
+            {Object.entries(taxonLabels).map(([value, label]) => (
+              <SelectItem key={value} value={value}>{label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
 
       {isLoading ? (
         <div className="flex justify-center py-12">
@@ -79,7 +135,14 @@ export default function AdminSpecies() {
                 </tr>
               </thead>
               <tbody>
-                {species.map(sp => (
+                {filtered.length === 0 && (
+                  <tr>
+                    <td colSpan={5} className="p-8 text-center text-sm text-muted-foreground">
+                      {isFiltering ? 'No se encontraron especies con esos criterios.' : 'Aún no hay especies registradas.'}
+                    </td>
+                  </tr>
+                )}
+                {filtered.map(sp => (
                   <tr key={sp.id} className="border-b border-border/50 hover:bg-muted/30 transition-colors">
                     <td className="p-3">
                       <div className="flex items-center gap-3">

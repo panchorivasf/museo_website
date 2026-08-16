@@ -1,10 +1,13 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/api/supabaseClient';
 import { Button } from '@/components/ui/button';
-import { Plus, Pencil, Trash2 } from 'lucide-react';
+import { Plus, Pencil, Trash2, Search, X } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import RecordingForm from '@/components/admin/RecordingForm';
+import { scrollToTop } from '@/lib/utils';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -15,10 +18,18 @@ const taxonLabels = {
   cetaceos: 'Cetáceos', mamiferos_terrestres: 'Roedores', felinos: 'Felinos',
 };
 
+const normalize = (value) => (value || '')
+  .toString()
+  .toLowerCase()
+  .normalize('NFD')
+  .replace(/\p{Diacritic}/gu, '');
+
 export default function AdminRecordings() {
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [search, setSearch] = useState('');
+  const [taxonFilter, setTaxonFilter] = useState('all');
   const queryClient = useQueryClient();
 
   const { data: recordings = [], isLoading } = useQuery({
@@ -44,12 +55,32 @@ export default function AdminRecordings() {
     },
   });
 
+  const filtered = useMemo(() => {
+    const term = normalize(search).trim();
+    return recordings.filter(rec => {
+      const taxon = rec.species?.taxon || rec.taxon;
+      if (taxonFilter !== 'all' && taxon !== taxonFilter) return false;
+      if (!term) return true;
+      return [
+        rec.species?.common_name,
+        rec.species?.scientific_name,
+        rec.species_name,
+        rec.location_name,
+        rec.recordist,
+      ].some(field => normalize(field).includes(term));
+    });
+  }, [recordings, search, taxonFilter]);
+
+  const isFiltering = search.trim() !== '' || taxonFilter !== 'all';
+
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
           <h2 className="text-2xl font-display font-bold text-primary">Grabaciones del Mapa</h2>
-          <p className="text-sm text-muted-foreground">{recordings.length} registro(s)</p>
+          <p className="text-sm text-muted-foreground">
+            {isFiltering ? `${filtered.length} de ${recordings.length} registro(s)` : `${recordings.length} registro(s)`}
+          </p>
         </div>
         <Button onClick={() => { setEditing(null); setShowForm(true); }} className="bg-secondary hover:bg-secondary/90">
           <Plus className="w-4 h-4 mr-2" /> Agregar Grabación
@@ -59,6 +90,37 @@ export default function AdminRecordings() {
       {showForm && (
         <RecordingForm recording={editing} onClose={() => { setShowForm(false); setEditing(null); }} />
       )}
+
+      <div className="flex flex-col sm:flex-row gap-2 mb-4">
+        <div className="relative flex-1">
+          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+          <Input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Buscar por especie, ubicación o grabador..."
+            className="pl-9 pr-9"
+          />
+          {search && (
+            <button
+              type="button"
+              onClick={() => setSearch('')}
+              aria-label="Limpiar búsqueda"
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded text-muted-foreground hover:text-primary"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
+        <Select value={taxonFilter} onValueChange={setTaxonFilter}>
+          <SelectTrigger className="sm:w-48"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos los taxones</SelectItem>
+            {Object.entries(taxonLabels).map(([value, label]) => (
+              <SelectItem key={value} value={value}>{label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
 
       {isLoading ? (
         <div className="flex justify-center py-12">
@@ -78,7 +140,14 @@ export default function AdminRecordings() {
                 </tr>
               </thead>
               <tbody>
-                {recordings.map(rec => (
+                {filtered.length === 0 && (
+                  <tr>
+                    <td colSpan={5} className="p-8 text-center text-sm text-muted-foreground">
+                      {isFiltering ? 'No se encontraron grabaciones con esos criterios.' : 'Aún no hay grabaciones registradas.'}
+                    </td>
+                  </tr>
+                )}
+                {filtered.map(rec => (
                   <tr key={rec.id} className="border-b border-border/50 hover:bg-muted/30 transition-colors">
                     <td className="p-3">
                       <p className="font-medium text-primary">{rec.species?.common_name || rec.species_name || '—'}</p>
@@ -96,7 +165,7 @@ export default function AdminRecordings() {
                     </td>
                     <td className="p-3 text-right">
                       <div className="flex items-center justify-end gap-1">
-                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setEditing(rec); setShowForm(true); }}>
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setEditing(rec); setShowForm(true); scrollToTop(); }}>
                           <Pencil className="w-3.5 h-3.5" />
                         </Button>
                         <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => setDeleteTarget(rec)}>
