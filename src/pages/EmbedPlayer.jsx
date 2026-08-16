@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/api/supabaseClient';
 import { useParams, useSearchParams } from 'react-router-dom';
 import SpectrogramPlayer from '@/components/audio/SpectrogramPlayer';
+import { spectrogramSettings } from '@/lib/spectrogram';
 
 export default function EmbedPlayer() {
   const { id } = useParams();
@@ -65,9 +66,7 @@ export default function EmbedPlayer() {
     <div className="bg-card border border-border rounded-lg p-4" style={{ maxWidth: '340px' }}>
       <SpectrogramPlayer
         audioUrl={species.audio_url}
-        spectrogramMin={species.spectrogram_min}
-        spectrogramMax={species.spectrogram_max}
-        fftSize={species.fft_size}
+        {...spectrogramSettings(species)}
         altText={`${species.common_name}`}
       />
       <div className="mt-3 space-y-1">

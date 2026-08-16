@@ -30,6 +30,16 @@ create table if not exists species (
 -- Migration for databases created before the references column existed
 alter table species add column if not exists "references" jsonb not null default '[]';
 
+-- Pre-rendered spectrogram picture, baked in the admin from the row's own
+-- spectrogram_min / spectrogram_max / fft_size settings so visitors download an
+-- image instead of running an FFT in the browser. Shape (see src/lib/spectrogram.js):
+--   { "url", "audio_url", "min_hz", "max_hz", "fft_size",
+--     "vis_min_hz", "vis_max_hz", "resolved_fft_size",
+--     "width", "height", "duration", "built_at" }
+-- The audio_url / min_hz / max_hz / fft_size fields record what the image was built
+-- from: when they no longer match the row, the players ignore it and compute live.
+alter table species add column if not exists spectrogram_image jsonb;
+
 -- Map recordings table
 create table if not exists map_recordings (
   id uuid primary key default gen_random_uuid(),
@@ -44,6 +54,9 @@ create table if not exists map_recordings (
   description text,
   created_at timestamptz default now()
 );
+
+-- Same pre-rendered picture as above, for pins that carry their own audio.
+alter table map_recordings add column if not exists spectrogram_image jsonb;
 
 -- Enable Row Level Security
 alter table species enable row level security;

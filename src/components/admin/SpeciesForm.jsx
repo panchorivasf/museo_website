@@ -8,10 +8,13 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Slider } from '@/components/ui/slider';
-import { X, Upload, Loader2, Map, BadgeCheck, AlertTriangle, Plus, Trash2, ChevronUp, ChevronDown } from 'lucide-react';
+import { X, Upload, Loader2, Map, BadgeCheck, AlertTriangle, Plus, Trash2, ChevronUp, ChevronDown, ImageDown, RefreshCw } from 'lucide-react';
 import LocationPicker from './LocationPicker';
 import RecordistSelect from './RecordistSelect';
 import SpectrogramPlayer from '@/components/audio/SpectrogramPlayer';
+import { generateSpectrogramImage, hasFreshSpectrogramImage } from '@/lib/prerenderSpectrogram';
+import { spectrogramSettings } from '@/lib/spectrogram';
+import { diffChars } from '@/lib/textDiff';
 
 const fftSizeOptions = [512, 1024, 2048, 4096, 8192, 16384];
 
@@ -90,9 +93,29 @@ export default function SpeciesForm({ species, onClose }) {
     recordist: species?.recordist || '',
     references: Array.isArray(species?.references) ? species.references : [],
     featured: species?.featured || false,
+    spectrogram_image: species?.spectrogram_image || null,
   });
 
   const numericFields = ['frequency_min', 'frequency_max', 'spectrogram_min', 'spectrogram_max', 'fft_size', 'recording_latitude', 'recording_longitude', 'image_position_y'];
+
+  // The baked spectrogram picture is rendered here in the browser and uploaded,
+  // so visitors never run the FFT themselves. It is rebuilt whenever the audio or
+  // the frequency/FFT parameters change.
+  const [spectrogramStatus, setSpectrogramStatus] = useState(null);
+
+  const ensureSpectrogramImage = async (data) => {
+    if (!data.audio_url) return null;
+    if (hasFreshSpectrogramImage(data)) return data.spectrogram_image;
+    setSpectrogramStatus('building');
+    try {
+      const meta = await generateSpectrogramImage(data);
+      setSpectrogramStatus(null);
+      return meta;
+    } catch (err) {
+      setSpectrogramStatus(null);
+      throw new Error(`No se pudo generar el espectrograma: ${err.message}`);
+    }
+  };
 
   const mutation = useMutation({
     mutationFn: async (rawData) => {
@@ -108,6 +131,7 @@ export default function SpeciesForm({ species, onClose }) {
           url: r.url?.trim() || null,
           url_label: r.url_label?.trim() || null,
         }));
+      data.spectrogram_image = await ensureSpectrogramImage(data);
       let speciesId = species?.id;
       if (isEditing) {
         const { error } = await supabase.from('species').update(data).eq('id', species.id);
@@ -130,6 +154,8 @@ export default function SpeciesForm({ species, onClose }) {
           audio_original_name: data.audio_original_name || null,
           recording_date: data.recording_date || null,
           recordist: data.recordist || null,
+          // The pin plays the species' audio, so it can show the same picture.
+          spectrogram_image: data.spectrogram_image || null,
         };
         const { data: existing } = await supabase
           .from('map_recordings')
@@ -202,20 +228,61 @@ export default function SpeciesForm({ species, onClose }) {
 
   const [gbifChecking, setGbifChecking] = useState(false);
   const [gbifResult, setGbifResult] = useState(null);
+  const [gbifApplied, setGbifApplied] = useState(false);
+
+  /** Order and family as GBIF spells them, for the fields of the same name. */
+  const applyGbifClassification = (result, extra = {}) => {
+    setForm(prev => ({
+      ...prev,
+      ...extra,
+      order: result.order || prev.order,
+      family: result.family || prev.family,
+    }));
+    setGbifApplied(true);
+  };
 
   const checkGbif = async () => {
-    if (!form.scientific_name.trim()) return;
+    const entered = form.scientific_name.trim();
+    if (!entered) return;
     setGbifChecking(true);
     setGbifResult(null);
+    setGbifApplied(false);
     try {
-      const res = await fetch(`https://api.gbif.org/v1/species/match?name=${encodeURIComponent(form.scientific_name)}`);
+      const res = await fetch(`https://api.gbif.org/v1/species/match?name=${encodeURIComponent(entered)}`);
       const data = await res.json();
       setGbifResult(data);
+      // A name that already matches is settled: fill in the classification now.
+      // When the spelling differs the admin decides first, via "Usar este nombre".
+      const canonical = data?.canonicalName || data?.scientificName;
+      if (data?.matchType && data.matchType !== 'NONE' && canonical === entered) {
+        applyGbifClassification(data);
+      }
     } catch (err) {
       setGbifResult({ error: true, message: err.message });
     } finally {
       setGbifChecking(false);
     }
+  };
+
+  const gbifCanonical = gbifResult?.canonicalName || gbifResult?.scientificName || '';
+  // A HIGHERRANK match means GBIF resolved only the genus (or above), not the name
+  // typed in: adopting it would silently truncate the species name, so it is offered
+  // as a classification fill only.
+  const gbifHigherRank = gbifResult?.matchType === 'HIGHERRANK';
+  const gbifDiffers = !!gbifCanonical && gbifCanonical !== form.scientific_name.trim();
+  const gbifDiff = gbifDiffers && !gbifHigherRank ? diffChars(form.scientific_name.trim(), gbifCanonical) : null;
+
+  const renderDiff = (segments) => segments.map((seg, i) => (
+    <span
+      key={i}
+      className={seg.changed ? 'bg-ocher/30 text-primary rounded-sm px-px font-semibold' : ''}
+    >
+      {seg.text}
+    </span>
+  ));
+
+  const acceptGbifName = () => {
+    applyGbifClassification(gbifResult, { scientific_name: gbifCanonical });
   };
 
   const handleSubmit = (e) => {
@@ -325,9 +392,49 @@ export default function SpeciesForm({ species, onClose }) {
                     <p className="text-muted-foreground">
                       {[gbifResult.rank, gbifResult.family, gbifResult.order].filter(Boolean).join(' · ')}
                     </p>
-                    {gbifResult.canonicalName && gbifResult.canonicalName !== form.scientific_name && (
-                      <p className="text-ocher">
-                        Difiere del nombre ingresado — revisa la ortografía.
+                    {gbifDiff && (
+                      <div className="pt-1 space-y-1">
+                        <p className="text-ocher">Difiere del nombre ingresado:</p>
+                        <div className="font-mono text-[11px] leading-relaxed">
+                          <p>
+                            <span className="text-muted-foreground">Ingresado: </span>
+                            {renderDiff(gbifDiff.left)}
+                          </p>
+                          <p>
+                            <span className="text-muted-foreground">GBIF: </span>
+                            {renderDiff(gbifDiff.right)}
+                          </p>
+                        </div>
+                        <Button
+                          type="button" variant="outline" size="sm"
+                          className="gap-1.5 text-xs h-7"
+                          onClick={acceptGbifName}
+                        >
+                          <BadgeCheck className="w-3 h-3" />
+                          Usar este nombre y completar orden/familia
+                        </Button>
+                      </div>
+                    )}
+                    {gbifHigherRank && (
+                      <div className="pt-1 space-y-1">
+                        <p className="text-ocher">
+                          GBIF no reconoce «{form.scientific_name.trim()}»; solo resolvió {gbifResult.rank
+                            ? `el rango ${gbifResult.rank.toLowerCase()}`
+                            : 'un rango superior'} «{gbifCanonical}». Revisa la ortografía del epíteto.
+                        </p>
+                        <Button
+                          type="button" variant="outline" size="sm"
+                          className="gap-1.5 text-xs h-7"
+                          onClick={() => applyGbifClassification(gbifResult)}
+                        >
+                          <BadgeCheck className="w-3 h-3" />
+                          Completar orden/familia de todos modos
+                        </Button>
+                      </div>
+                    )}
+                    {gbifApplied && !gbifDiff && (
+                      <p className="text-secondary">
+                        Orden y familia completados desde GBIF.
                       </p>
                     )}
                   </>
@@ -588,12 +695,41 @@ export default function SpeciesForm({ species, onClose }) {
             <p className="text-xs text-muted-foreground">
               Si el espectrograma automático se ve borroso o muy comprimido, prueba un valor de FFT más alto (más resolución en frecuencia, más lento) o más bajo (más resolución en el tiempo).
             </p>
+            <p className="text-xs text-muted-foreground">
+              El rango visible se controla únicamente con <strong>Espectrograma mín./máx.</strong> Si los dejas vacíos se muestra el rango completo del audio. Las frecuencias informativas no afectan al espectrograma.
+            </p>
+
+            <div className="flex items-center justify-between gap-2 flex-wrap rounded-md bg-muted/50 px-3 py-2">
+              <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+                <ImageDown className="w-3.5 h-3.5 shrink-0" />
+                {spectrogramStatus === 'building'
+                  ? 'Generando la imagen del espectrograma...'
+                  : hasFreshSpectrogramImage(form)
+                    ? 'Imagen del espectrograma guardada: los visitantes la descargan en vez de calcularla.'
+                    : 'Se generará y guardará la imagen del espectrograma al guardar los cambios.'}
+              </p>
+              {hasFreshSpectrogramImage(form) && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-7 text-xs"
+                  disabled={spectrogramStatus === 'building'}
+                  onClick={() => update('spectrogram_image', null)}
+                >
+                  <RefreshCw className="w-3 h-3 mr-1.5" /> Regenerar al guardar
+                </Button>
+              )}
+            </div>
+
+            {/* Always rendered live from the current form values — this preview is
+                what the saved picture will be baked from. */}
             <SpectrogramPlayer
               key={`${form.audio_url}-${form.spectrogram_min}-${form.spectrogram_max}-${form.fft_size}`}
               audioUrl={form.audio_url}
-              spectrogramMin={form.spectrogram_min || form.frequency_min}
-              spectrogramMax={form.spectrogram_max || form.frequency_max}
+              {...spectrogramSettings(form)}
               fftSize={form.fft_size ? parseInt(form.fft_size, 10) : null}
+              spectrogramImage={null}
               altText="Vista previa del espectrograma"
             />
           </div>
@@ -628,7 +764,9 @@ export default function SpeciesForm({ species, onClose }) {
           <Button type="button" variant="outline" onClick={onClose}>Cancelar</Button>
           <Button type="submit" className="bg-secondary hover:bg-secondary/90" disabled={mutation.isPending || uploading}>
             {mutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-            {isEditing ? 'Guardar Cambios' : 'Crear Especie'}
+            {spectrogramStatus === 'building'
+              ? 'Generando espectrograma...'
+              : isEditing ? 'Guardar Cambios' : 'Crear Especie'}
           </Button>
         </div>
       </form>

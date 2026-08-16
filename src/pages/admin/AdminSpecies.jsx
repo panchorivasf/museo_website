@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import SpeciesForm from '@/components/admin/SpeciesForm';
+import SpectrogramBulkGenerator from '@/components/admin/SpectrogramBulkGenerator';
 import { scrollToTop } from '@/lib/utils';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -86,6 +87,13 @@ export default function AdminSpecies() {
 
       {showForm && <SpeciesForm species={editing} onClose={handleClose} />}
 
+      <SpectrogramBulkGenerator
+        records={species}
+        table="species"
+        queryKeys={['admin-species', 'species', 'featured-species', 'map-recordings']}
+        describe={sp => sp.common_name || sp.scientific_name}
+      />
+
       <div className="flex flex-col sm:flex-row gap-2 mb-4">
         <div className="relative flex-1">
           <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
@@ -129,7 +137,8 @@ export default function AdminSpecies() {
                 <tr className="border-b border-border bg-muted/50">
                   <th className="text-left p-3 font-heading text-xs uppercase tracking-wider text-muted-foreground">Especie</th>
                   <th className="text-left p-3 font-heading text-xs uppercase tracking-wider text-muted-foreground">Taxón</th>
-                  <th className="text-left p-3 font-heading text-xs uppercase tracking-wider text-muted-foreground hidden md:table-cell">Audio</th>
+                  <th className="text-left p-3 font-heading text-xs uppercase tracking-wider text-muted-foreground hidden md:table-cell">Localidad</th>
+                  <th className="text-left p-3 font-heading text-xs uppercase tracking-wider text-muted-foreground hidden lg:table-cell">Grabador(a)</th>
                   <th className="text-left p-3 font-heading text-xs uppercase tracking-wider text-muted-foreground hidden sm:table-cell">Destacada</th>
                   <th className="text-right p-3 font-heading text-xs uppercase tracking-wider text-muted-foreground">Acciones</th>
                 </tr>
@@ -137,7 +146,7 @@ export default function AdminSpecies() {
               <tbody>
                 {filtered.length === 0 && (
                   <tr>
-                    <td colSpan={5} className="p-8 text-center text-sm text-muted-foreground">
+                    <td colSpan={6} className="p-8 text-center text-sm text-muted-foreground">
                       {isFiltering ? 'No se encontraron especies con esos criterios.' : 'Aún no hay especies registradas.'}
                     </td>
                   </tr>
@@ -158,13 +167,14 @@ export default function AdminSpecies() {
                     <td className="p-3">
                       <Badge variant="outline" className="text-xs">{taxonLabels[sp.taxon] || sp.taxon}</Badge>
                     </td>
-                    <td className="p-3 hidden md:table-cell max-w-[160px]">
-                      {sp.audio_url
-                        ? (
-                          <span className="text-xs text-secondary" title={sp.audio_original_name || ''}>
-                            ✓ Audio{sp.audio_original_name ? <span className="text-muted-foreground"> — {sp.audio_original_name}</span> : ''}
-                          </span>
-                        )
+                    <td className="p-3 hidden md:table-cell max-w-[200px]">
+                      {sp.recording_location
+                        ? <span className="text-xs text-muted-foreground">{sp.recording_location}</span>
+                        : <span className="text-xs text-muted-foreground/50">—</span>}
+                    </td>
+                    <td className="p-3 hidden lg:table-cell max-w-[160px]">
+                      {sp.recordist
+                        ? <span className="text-xs text-muted-foreground">{sp.recordist}</span>
                         : <span className="text-xs text-muted-foreground/50">—</span>}
                     </td>
                     <td className="p-3 hidden sm:table-cell">

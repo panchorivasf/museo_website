@@ -10,6 +10,7 @@ import MiniSpectrogram, { stopActiveMiniSpectrogram } from '@/components/audio/M
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useTheme } from '@/lib/ThemeContext';
+import { spectrogramSettings } from '@/lib/spectrogram';
 import 'leaflet/dist/leaflet.css';
 
 const taxonConfig = {
@@ -157,9 +158,7 @@ function RecordingPopup({ recording }) {
         <div style={{ position: 'relative' }}>
           <MiniSpectrogram
             audioUrl={recording.audio_url}
-            frequencyMin={recording.spectrogram_min ?? recording.frequency_min}
-            frequencyMax={recording.spectrogram_max ?? recording.frequency_max}
-            fftSize={recording.fft_size}
+            {...spectrogramSettings(recording)}
           />
         </div>
       )}
@@ -178,7 +177,7 @@ export default function BiophonyMap() {
     queryFn: async () => {
       const { data } = await supabase
         .from('map_recordings')
-        .select('*, species(common_name, scientific_name, taxon, image_url, frequency_min, frequency_max, spectrogram_min, spectrogram_max, fft_size)')
+        .select('*, species(common_name, scientific_name, taxon, image_url, frequency_min, frequency_max, spectrogram_min, spectrogram_max, fft_size, spectrogram_image)')
         .order('created_at', { ascending: false })
         .limit(500);
       return (data || []).map(r => ({
@@ -192,6 +191,9 @@ export default function BiophonyMap() {
         spectrogram_min: r.species?.spectrogram_min || null,
         spectrogram_max: r.species?.spectrogram_max || null,
         fft_size: r.species?.fft_size || null,
+        // The pin's own baked picture, or the species' one when the pin plays the
+        // species' audio. A picture built for different audio is rejected downstream.
+        spectrogram_image: r.spectrogram_image || r.species?.spectrogram_image || null,
       }));
     },
   });

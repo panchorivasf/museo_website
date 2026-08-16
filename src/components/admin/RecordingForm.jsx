@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { X, Upload, Loader2, Map } from 'lucide-react';
 import RecordistSelect from './RecordistSelect';
 import LocationPicker from './LocationPicker';
+import { generateSpectrogramImage, hasFreshSpectrogramImage } from '@/lib/prerenderSpectrogram';
 
 const UNCATALOGUED = '__uncatalogued__';
 
@@ -62,7 +63,7 @@ export default function RecordingForm({ recording, onClose }) {
     queryFn: async () => {
       const { data } = await supabase
         .from('species')
-        .select('id, common_name, scientific_name, taxon, recording_location, recording_latitude, recording_longitude, recording_date, recordist, audio_url')
+        .select('id, common_name, scientific_name, taxon, recording_location, recording_latitude, recording_longitude, recording_date, recordist, audio_url, spectrogram_min, spectrogram_max, fft_size, spectrogram_image')
         .order('common_name');
       return data || [];
     },
@@ -84,6 +85,31 @@ export default function RecordingForm({ recording, onClose }) {
     }));
   };
 
+  // Baked spectrogram picture for this pin, rendered with the linked species'
+  // frequency window and FFT size (or full range when the pin is uncatalogued).
+  const [buildingSpectrogram, setBuildingSpectrogram] = useState(false);
+
+  const ensureSpectrogramImage = async (audioUrl, speciesId) => {
+    if (!audioUrl) return null;
+    const sp = speciesList.find(s => s.id === speciesId);
+    const source = {
+      audio_url: audioUrl,
+      spectrogram_min: sp?.spectrogram_min ?? null,
+      spectrogram_max: sp?.spectrogram_max ?? null,
+      fft_size: sp?.fft_size ?? null,
+      spectrogram_image: recording?.spectrogram_image || sp?.spectrogram_image || null,
+    };
+    if (hasFreshSpectrogramImage(source)) return source.spectrogram_image;
+    setBuildingSpectrogram(true);
+    try {
+      return await generateSpectrogramImage(source);
+    } catch (err) {
+      throw new Error(`No se pudo generar el espectrograma: ${err.message}`);
+    } finally {
+      setBuildingSpectrogram(false);
+    }
+  };
+
   const mutation = useMutation({
     mutationFn: async (data) => {
       const payload = {
@@ -100,6 +126,7 @@ export default function RecordingForm({ recording, onClose }) {
         recordist: data.recordist || null,
         description: data.description || null,
       };
+      payload.spectrogram_image = await ensureSpectrogramImage(payload.audio_url, payload.species_id);
       if (isEditing) {
         const { error } = await supabase.from('map_recordings').update(payload).eq('id', recording.id);
         if (error) throw error;
@@ -291,7 +318,9 @@ export default function RecordingForm({ recording, onClose }) {
           <Button type="button" variant="outline" onClick={onClose}>Cancelar</Button>
           <Button type="submit" className="bg-secondary hover:bg-secondary/90" disabled={mutation.isPending || uploading}>
             {mutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-            {isEditing ? 'Guardar Cambios' : 'Crear Grabación'}
+            {buildingSpectrogram
+              ? 'Generando espectrograma...'
+              : isEditing ? 'Guardar Cambios' : 'Crear Grabación'}
           </Button>
         </div>
       </form>

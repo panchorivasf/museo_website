@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import RecordingForm from '@/components/admin/RecordingForm';
+import SpectrogramBulkGenerator from '@/components/admin/SpectrogramBulkGenerator';
 import { scrollToTop } from '@/lib/utils';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -37,10 +38,17 @@ export default function AdminRecordings() {
     queryFn: async () => {
       const { data } = await supabase
         .from('map_recordings')
-        .select('*, species:species_id(common_name, scientific_name, taxon)')
+        .select('*, species:species_id(common_name, scientific_name, taxon, spectrogram_min, spectrogram_max, fft_size, spectrogram_image)')
         .order('created_at', { ascending: false })
         .limit(500);
-      return data || [];
+      // Spectrogram settings live on the species; a pin renders its own audio with them.
+      return (data || []).map(rec => ({
+        ...rec,
+        spectrogram_min: rec.species?.spectrogram_min ?? null,
+        spectrogram_max: rec.species?.spectrogram_max ?? null,
+        fft_size: rec.species?.fft_size ?? null,
+        spectrogram_image: rec.spectrogram_image || rec.species?.spectrogram_image || null,
+      }));
     },
   });
 
@@ -90,6 +98,13 @@ export default function AdminRecordings() {
       {showForm && (
         <RecordingForm recording={editing} onClose={() => { setShowForm(false); setEditing(null); }} />
       )}
+
+      <SpectrogramBulkGenerator
+        records={recordings}
+        table="map_recordings"
+        queryKeys={['admin-recordings', 'map-recordings']}
+        describe={rec => rec.species?.common_name || rec.species_name || rec.location_name || rec.id}
+      />
 
       <div className="flex flex-col sm:flex-row gap-2 mb-4">
         <div className="relative flex-1">

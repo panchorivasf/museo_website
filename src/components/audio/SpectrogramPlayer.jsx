@@ -1,126 +1,29 @@
-import React, { useRef, useEffect, useState, useCallback } from 'react';
+import React, { useRef, useEffect, useMemo, useState, useCallback } from 'react';
 import { Play, Pause, SkipBack, Volume2, VolumeX, Gauge, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
-
-// Cooley-Tukey radix-2 FFT (in-place)
-function fftInPlace(re, im) {
-  const N = re.length;
-  for (let i = 1, j = 0; i < N; i++) {
-    let bit = N >> 1;
-    for (; j & bit; bit >>= 1) j ^= bit;
-    j ^= bit;
-    if (i < j) {
-      [re[i], re[j]] = [re[j], re[i]];
-      [im[i], im[j]] = [im[j], im[i]];
-    }
-  }
-  for (let len = 2; len <= N; len <<= 1) {
-    const ang = (2 * Math.PI) / len;
-    const wRe = Math.cos(ang), wIm = -Math.sin(ang);
-    for (let i = 0; i < N; i += len) {
-      let cRe = 1, cIm = 0;
-      for (let j = 0; j < len / 2; j++) {
-        const uRe = re[i + j], uIm = im[i + j];
-        const vRe = re[i + j + len / 2] * cRe - im[i + j + len / 2] * cIm;
-        const vIm = re[i + j + len / 2] * cIm + im[i + j + len / 2] * cRe;
-        re[i + j] = uRe + vRe; im[i + j] = uIm + vIm;
-        re[i + j + len / 2] = uRe - vRe; im[i + j + len / 2] = uIm - vIm;
-        const nr = cRe * wRe - cIm * wIm;
-        cIm = cRe * wIm + cIm * wRe;
-        cRe = nr;
-      }
-    }
-  }
-}
-
-function valueToColor(v) {
-  const hue = 183 - (v / 255) * 50;
-  const sat = 60 + (v / 255) * 30;
-  const light = 10 + (v / 255) * 45;
-  // Convert HSL to RGB for ImageData
-  const s = sat / 100, l = light / 100;
-  const c = (1 - Math.abs(2 * l - 1)) * s;
-  const x = c * (1 - Math.abs(((hue / 60) % 2) - 1));
-  const m = l - c / 2;
-  let r = 0, g = 0, b = 0;
-  if (hue < 60) { r = c; g = x; }
-  else if (hue < 120) { r = x; g = c; }
-  else if (hue < 180) { g = c; b = x; }
-  else if (hue < 240) { g = x; b = c; }
-  else if (hue < 300) { r = x; b = c; }
-  else { r = c; b = x; }
-  return [Math.round((r + m) * 255), Math.round((g + m) * 255), Math.round((b + m) * 255)];
-}
+import {
+  isSpectrogramMetaFresh,
+  offscreenWidthFor,
+  renderSpectrogram,
+  scaleImageToOffscreen,
+  toHz,
+} from '@/lib/spectrogram';
 
 const VISIBLE_SECONDS = 4; // seconds visible in the canvas at once
 
-function pickFftSize(sampleRate, freqMinHz, freqMaxHz, canvasH) {
-  const nyquist = sampleRate / 2;
-  const rangeHz = (freqMaxHz ?? nyquist) - (freqMinHz ?? 0);
-  const needed = Math.ceil(canvasH * sampleRate / rangeHz);
-  let size = 1024;
-  while (size < needed && size < 16384) size <<= 1;
-  return size;
-}
-
 function buildSpectrogramImage(audioBuffer, canvasWidth, canvasHeight, freqMinHz, freqMaxHz, fftSizeOverride) {
-  const nyquist = audioBuffer.sampleRate / 2;
-  const fftSize = fftSizeOverride || pickFftSize(audioBuffer.sampleRate, freqMinHz, freqMaxHz, canvasHeight);
-  const hopSize = Math.floor(fftSize / 4);
-  const numBins = fftSize / 2;
-  const channelData = audioBuffer.getChannelData(0);
-  const numFrames = Math.floor((channelData.length - fftSize) / hopSize);
-
-  const re = new Float32Array(fftSize);
-  const im = new Float32Array(fftSize);
-
-  const frames = [];
-  for (let f = 0; f < numFrames; f++) {
-    const start = f * hopSize;
-    for (let i = 0; i < fftSize; i++) {
-      const hann = 0.5 * (1 - Math.cos((2 * Math.PI * i) / (fftSize - 1)));
-      re[i] = (channelData[start + i] || 0) * hann;
-      im[i] = 0;
-    }
-    fftInPlace(re, im);
-    const mags = new Uint8Array(numBins);
-    for (let b = 0; b < numBins; b++) {
-      const mag = Math.sqrt(re[b] * re[b] + im[b] * im[b]) / fftSize;
-      const db = Math.max(-80, 20 * Math.log10(mag + 1e-9));
-      mags[b] = Math.round(((db + 80) / 80) * 255);
-    }
-    frames.push(mags);
-  }
-
-  const minBin = freqMinHz ? Math.max(0, Math.floor((freqMinHz / nyquist) * numBins)) : 0;
-  const maxBin = freqMaxHz ? Math.min(numBins, Math.ceil((freqMaxHz / nyquist) * numBins)) : numBins;
-
-  const duration = audioBuffer.duration;
-  const zoomFactor = duration > VISIBLE_SECONDS ? duration / VISIBLE_SECONDS : 1;
-  const offscreenWidth = Math.round(canvasWidth * zoomFactor);
-
-  const offscreen = document.createElement('canvas');
-  offscreen.width = offscreenWidth;
-  offscreen.height = canvasHeight;
-  const ctx = offscreen.getContext('2d');
-  const imageData = ctx.createImageData(offscreenWidth, canvasHeight);
-  const data = imageData.data;
-
-  for (let col = 0; col < offscreenWidth; col++) {
-    const frameIdx = Math.floor((col / offscreenWidth) * frames.length);
-    const frame = frames[Math.min(frameIdx, frames.length - 1)];
-    for (let row = 0; row < canvasHeight; row++) {
-      const binIdx = minBin + Math.floor(((canvasHeight - 1 - row) / canvasHeight) * (maxBin - minBin));
-      const v = frame[Math.min(binIdx, numBins - 1)];
-      const [r, g, b] = valueToColor(v);
-      const idx = (row * offscreenWidth + col) * 4;
-      data[idx] = r; data[idx + 1] = g; data[idx + 2] = b; data[idx + 3] = 255;
-    }
-  }
-  ctx.putImageData(imageData, 0, 0);
+  const offscreenWidth = offscreenWidthFor(canvasWidth, audioBuffer.duration, VISIBLE_SECONDS);
+  const { canvas, minHz, maxHz } = renderSpectrogram(audioBuffer, {
+    width: offscreenWidth,
+    height: canvasHeight,
+    freqMinHz,
+    freqMaxHz,
+    fftSize: fftSizeOverride,
+    minFftSize: 1024,
+  });
   // Return visible freq range so labels can be drawn correctly
-  return { offscreen, visMinHz: freqMinHz ?? 0, visMaxHz: freqMaxHz ?? nyquist };
+  return { offscreen: canvas, visMinHz: minHz, visMaxHz: maxHz };
 }
 
 // Built spectrograms are expensive (a full FFT pass over the file plus a per-pixel
@@ -144,7 +47,7 @@ function getSpectrogramImage(key, audioBuffer, w, h, minHz, maxHz, fftSize) {
   return result;
 }
 
-export default function SpectrogramPlayer({ audioUrl, altText, spectrogramMin, spectrogramMax, fftSize }) {
+export default function SpectrogramPlayer({ audioUrl, altText, spectrogramMin, spectrogramMax, fftSize, spectrogramImage }) {
   const canvasRef = useRef(null);
   const offscreenRef = useRef(null);
   const audioContextRef = useRef(null);
@@ -169,6 +72,30 @@ export default function SpectrogramPlayer({ audioUrl, altText, spectrogramMin, s
   const [currentTime, setCurrentTime] = useState(0);
   const [nyquist, setNyquist] = useState(null);
   const [visFreqRange, setVisFreqRange] = useState({ min: 0, max: null }); // Hz
+  const [bakedImage, setBakedImage] = useState(null);
+
+  const freqMinHz = toHz(spectrogramMin);
+  const freqMaxHz = toHz(spectrogramMax);
+
+  // A stored spectrogram picture is used only when it was baked from this audio
+  // with these exact parameters; otherwise we fall back to computing it live.
+  const bakedMeta = useMemo(
+    () => (isSpectrogramMetaFresh(spectrogramImage, { audioUrl, freqMinHz, freqMaxHz, fftSize })
+      ? spectrogramImage
+      : null),
+    [spectrogramImage, audioUrl, freqMinHz, freqMaxHz, fftSize],
+  );
+
+  useEffect(() => {
+    if (!bakedMeta) { setBakedImage(null); return undefined; }
+    let cancelled = false;
+    const img = new Image();
+    img.onload = () => { if (!cancelled) setBakedImage(img); };
+    // A missing or broken picture is not fatal: the live FFT path still works.
+    img.onerror = () => { if (!cancelled) setBakedImage(null); };
+    img.src = bakedMeta.url;
+    return () => { cancelled = true; };
+  }, [bakedMeta]);
 
   const renderAtTime = useCallback((t) => {
     const canvas = canvasRef.current;
@@ -178,7 +105,9 @@ export default function SpectrogramPlayer({ audioUrl, altText, spectrogramMin, s
     const ctx = canvas.getContext('2d');
     const W = canvas.width;
     const H = canvas.height;
-    const dur = audioBufferRef.current?.duration || 0;
+    // Before the audio finishes decoding the baked image already knows how long
+    // the clip is, so the picture can be drawn without waiting for it.
+    const dur = audioBufferRef.current?.duration || bakedMeta?.duration || 0;
     const offW = offscreen.width;
     const centerX = W / 2;
 
@@ -201,9 +130,9 @@ export default function SpectrogramPlayer({ audioUrl, altText, spectrogramMin, s
     ctx.drawImage(offscreen, srcX, 0, W, H, 0, 0, W, H);
 
     // Frequency axis labels relative to visible range
-    if (nyquist) {
+    const visMax = visFreqRange.max ?? nyquist;
+    if (visMax) {
       const visMin = visFreqRange.min;
-      const visMax = visFreqRange.max ?? nyquist;
       const rangeHz = visMax - visMin;
       // Pick a round step that gives ~4-6 labels
       const rawStep = rangeHz / 5;
@@ -227,7 +156,7 @@ export default function SpectrogramPlayer({ audioUrl, altText, spectrogramMin, s
     ctx.moveTo(playheadScreen, 0);
     ctx.lineTo(playheadScreen, H);
     ctx.stroke();
-  }, [nyquist, visFreqRange]);
+  }, [nyquist, visFreqRange, bakedMeta]);
 
   const drawFrame = useCallback(() => {
     const dur = audioBufferRef.current?.duration || 0;
@@ -266,11 +195,27 @@ export default function SpectrogramPlayer({ audioUrl, altText, spectrogramMin, s
   // changes: the audio, the canvas pixel size, or the frequency/FFT settings.
   const buildIfNeeded = useCallback(() => {
     const canvas = canvasRef.current;
-    const buffer = audioBufferRef.current;
-    if (!canvas || !buffer || !isLoaded) return;
+    if (!canvas) return;
 
-    const freqMinHz = spectrogramMin ? spectrogramMin * 1000 : null;
-    const freqMaxHz = spectrogramMax ? spectrogramMax * 1000 : null;
+    // Fast path: a picture baked from these parameters only needs rescaling to the
+    // strip the player pans across — no FFT, and no need to wait for the audio.
+    if (bakedImage && bakedMeta) {
+      const key = `image:${bakedMeta.url}|${canvas.width}x${canvas.height}`;
+      if (builtKeyRef.current === key && offscreenRef.current) return;
+      const dur = audioBufferRef.current?.duration || bakedMeta.duration || 0;
+      if (!dur) return;
+      const offW = offscreenWidthFor(canvas.width, dur, VISIBLE_SECONDS);
+      offscreenRef.current = scaleImageToOffscreen(bakedImage, offW, canvas.height);
+      builtKeyRef.current = key;
+      const visMin = bakedMeta.vis_min_hz ?? 0;
+      const visMax = bakedMeta.vis_max_hz ?? null;
+      setVisFreqRange(prev => (prev.min === visMin && prev.max === visMax ? prev : { min: visMin, max: visMax }));
+      return;
+    }
+
+    const buffer = audioBufferRef.current;
+    if (!buffer || !isLoaded) return;
+
     const key = spectrogramCacheKey(audioUrl, canvas.width, canvas.height, fftSize, freqMinHz, freqMaxHz);
     if (builtKeyRef.current === key && offscreenRef.current) return;
 
@@ -284,7 +229,7 @@ export default function SpectrogramPlayer({ audioUrl, altText, spectrogramMin, s
         ? prev
         : { min: result.visMinHz, max: result.visMaxHz }
     );
-  }, [isLoaded, audioUrl, spectrogramMin, spectrogramMax, fftSize]);
+  }, [isLoaded, audioUrl, freqMinHz, freqMaxHz, fftSize, bakedImage, bakedMeta]);
 
   // Draw static spectrogram once loaded
   // Auto-load on mount
@@ -293,10 +238,11 @@ export default function SpectrogramPlayer({ audioUrl, altText, spectrogramMin, s
   }, [audioUrl]);
 
   useEffect(() => {
-    if (isLoaded && !isPlaying) {
+    if ((isLoaded || bakedImage) && !isPlaying) {
+      buildIfNeeded();
       drawStatic();
     }
-  }, [isLoaded, drawStatic]);
+  }, [isLoaded, bakedImage, buildIfNeeded, drawStatic]);
 
   const stopSource = useCallback((resetOffset = true) => {
     if (sourceRef.current) {
@@ -493,16 +439,18 @@ export default function SpectrogramPlayer({ audioUrl, altText, spectrogramMin, s
     <div className="rounded-xl overflow-hidden bg-card border border-border shadow-lg" role="region" aria-label={altText || 'Reproductor de espectrograma'}>
       <div className="relative bg-primary/95 aspect-[3/1] min-h-[180px]">
         <canvas ref={canvasRef} onClick={handleCanvasClick} className="w-full h-full cursor-pointer" aria-label={altText || 'Espectrograma'} />
-        {!isLoaded && !isLoading && (
+        {!isLoaded && !isLoading && !bakedImage && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
             <p className="text-primary-foreground/60 text-sm font-body">Presiona reproducir para cargar el audio</p>
           </div>
         )}
-        {isLoading && (
+        {isLoading && !bakedImage && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
             <div className="text-center">
               <div className="w-6 h-6 border-2 border-secondary border-t-transparent rounded-full animate-spin mx-auto mb-2" />
-              <p className="text-primary-foreground/60 text-xs font-body">Generando espectrograma...</p>
+              <p className="text-primary-foreground/60 text-xs font-body">
+                {bakedMeta ? 'Cargando audio...' : 'Generando espectrograma...'}
+              </p>
             </div>
           </div>
         )}

@@ -6,6 +6,7 @@ import { ArrowLeft, MapPin, Calendar, User, Info, Share2, Copy, Code, ChevronDow
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import SpectrogramPlayer from '@/components/audio/SpectrogramPlayer';
+import { spectrogramSettings } from '@/lib/spectrogram';
 import ReactMarkdown from 'react-markdown';
 import SpeciesLocationMap from '@/components/species/SpeciesLocationMap';
 
@@ -209,9 +210,7 @@ export default function SpeciesDetail() {
           {species.audio_url && (
             <SpectrogramPlayer
               audioUrl={species.audio_url}
-              spectrogramMin={species.spectrogram_min}
-              spectrogramMax={species.spectrogram_max}
-              fftSize={species.fft_size}
+              {...spectrogramSettings(species)}
               altText={`Espectrograma del sonido de ${species.common_name} (${species.scientific_name})`}
             />
           )}

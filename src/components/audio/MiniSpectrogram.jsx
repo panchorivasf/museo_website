@@ -1,5 +1,12 @@
-import React, { useRef, useEffect, useState, useCallback } from 'react';
+import React, { useRef, useEffect, useMemo, useState, useCallback } from 'react';
 import { Play, Pause } from 'lucide-react';
+import {
+  isSpectrogramMetaFresh,
+  offscreenWidthFor,
+  renderSpectrogram,
+  scaleImageToOffscreen,
+  toHz,
+} from '@/lib/spectrogram';
 
 // Module-level: only one mini spectrogram plays at a time.
 // Stores a ref to the currently playing instance's pause fn.
@@ -11,111 +18,21 @@ export function stopActiveMiniSpectrogram() {
 const VISIBLE_SECONDS = 2;
 const CANVAS_H = 72;
 
-function fftInPlace(re, im) {
-  const N = re.length;
-  for (let i = 1, j = 0; i < N; i++) {
-    let bit = N >> 1;
-    for (; j & bit; bit >>= 1) j ^= bit;
-    j ^= bit;
-    if (i < j) { [re[i], re[j]] = [re[j], re[i]]; [im[i], im[j]] = [im[j], im[i]]; }
-  }
-  for (let len = 2; len <= N; len <<= 1) {
-    const ang = (2 * Math.PI) / len;
-    const wRe = Math.cos(ang), wIm = -Math.sin(ang);
-    for (let i = 0; i < N; i += len) {
-      let cRe = 1, cIm = 0;
-      for (let j = 0; j < len / 2; j++) {
-        const uRe = re[i + j], uIm = im[i + j];
-        const vRe = re[i + j + len / 2] * cRe - im[i + j + len / 2] * cIm;
-        const vIm = re[i + j + len / 2] * cIm + im[i + j + len / 2] * cRe;
-        re[i + j] = uRe + vRe; im[i + j] = uIm + vIm;
-        re[i + j + len / 2] = uRe - vRe; im[i + j + len / 2] = uIm - vIm;
-        const nr = cRe * wRe - cIm * wIm; cIm = cRe * wIm + cIm * wRe; cRe = nr;
-      }
-    }
-  }
-}
-
-function valueToColor(v) {
-  const hue = 183 - (v / 255) * 50;
-  const sat = 60 + (v / 255) * 30;
-  const light = 10 + (v / 255) * 45;
-  const s = sat / 100, l = light / 100;
-  const c = (1 - Math.abs(2 * l - 1)) * s;
-  const x = c * (1 - Math.abs(((hue / 60) % 2) - 1));
-  const m = l - c / 2;
-  let r = 0, g = 0, b = 0;
-  if (hue < 60) { r = c; g = x; } else if (hue < 120) { r = x; g = c; }
-  else if (hue < 180) { g = c; b = x; } else if (hue < 240) { g = x; b = c; }
-  else if (hue < 300) { r = x; b = c; } else { r = c; b = x; }
-  return [Math.round((r + m) * 255), Math.round((g + m) * 255), Math.round((b + m) * 255)];
-}
-
-function pickFftSize(sampleRate, freqMinHz, freqMaxHz, canvasH) {
-  const nyquist = sampleRate / 2;
-  const rangeHz = (freqMaxHz ?? nyquist) - (freqMinHz ?? 0);
-  // We want enough bins so the visible freq range covers at least canvasH pixels
-  const needed = Math.ceil(canvasH * sampleRate / rangeHz);
-  let size = 512;
-  while (size < needed && size < 16384) size <<= 1;
-  return size;
-}
-
 function buildOffscreen(audioBuffer, canvasW, canvasH, freqMinHz, freqMaxHz, fftSizeOverride) {
-  const fftSize = fftSizeOverride || pickFftSize(audioBuffer.sampleRate, freqMinHz, freqMaxHz, canvasH);
-  const hopSize = Math.floor(fftSize / 4);
-  const numBins = fftSize / 2;
-  const nyquist = audioBuffer.sampleRate / 2;
-  const channelData = audioBuffer.getChannelData(0);
-  const numFrames = Math.floor((channelData.length - fftSize) / hopSize);
-  const re = new Float32Array(fftSize);
-  const im = new Float32Array(fftSize);
-  const frames = [];
-
-  for (let f = 0; f < numFrames; f++) {
-    const start = f * hopSize;
-    for (let i = 0; i < fftSize; i++) {
-      const hann = 0.5 * (1 - Math.cos((2 * Math.PI * i) / (fftSize - 1)));
-      re[i] = (channelData[start + i] || 0) * hann; im[i] = 0;
-    }
-    fftInPlace(re, im);
-    const mags = new Uint8Array(numBins);
-    for (let b = 0; b < numBins; b++) {
-      const mag = Math.sqrt(re[b] * re[b] + im[b] * im[b]) / fftSize;
-      const db = Math.max(-80, 20 * Math.log10(mag + 1e-9));
-      mags[b] = Math.round(((db + 80) / 80) * 255);
-    }
-    frames.push(mags);
-  }
-
-  const minBin = freqMinHz ? Math.max(0, Math.floor((freqMinHz / nyquist) * numBins)) : 0;
-  const maxBin = freqMaxHz ? Math.min(numBins, Math.ceil((freqMaxHz / nyquist) * numBins)) : numBins;
-  const duration = audioBuffer.duration;
-  const zoomFactor = duration > VISIBLE_SECONDS ? duration / VISIBLE_SECONDS : 1;
-  const offW = Math.round(canvasW * zoomFactor);
-
-  const offscreen = document.createElement('canvas');
-  offscreen.width = offW; offscreen.height = canvasH;
-  const ctx = offscreen.getContext('2d');
-  const imageData = ctx.createImageData(offW, canvasH);
-  const data = imageData.data;
-
-  for (let col = 0; col < offW; col++) {
-    const frameIdx = Math.floor((col / offW) * frames.length);
-    const frame = frames[Math.min(frameIdx, frames.length - 1)];
-    for (let row = 0; row < canvasH; row++) {
-      const binIdx = minBin + Math.floor(((canvasH - 1 - row) / canvasH) * (maxBin - minBin));
-      const v = frame[Math.min(binIdx, numBins - 1)];
-      const [r, g, b] = valueToColor(v);
-      const idx = (row * offW + col) * 4;
-      data[idx] = r; data[idx + 1] = g; data[idx + 2] = b; data[idx + 3] = 255;
-    }
-  }
-  ctx.putImageData(imageData, 0, 0);
-  return offscreen;
+  const offW = offscreenWidthFor(canvasW, audioBuffer.duration, VISIBLE_SECONDS);
+  const { canvas } = renderSpectrogram(audioBuffer, {
+    width: offW,
+    height: canvasH,
+    freqMinHz,
+    freqMaxHz,
+    fftSize: fftSizeOverride,
+    minFftSize: 512,
+  });
+  return canvas;
 }
 
-export default function MiniSpectrogram({ audioUrl, frequencyMin, frequencyMax, fftSize }) {
+// Prop names match SpectrogramPlayer so both can be fed by spectrogramSettings().
+export default function MiniSpectrogram({ audioUrl, spectrogramMin, spectrogramMax, fftSize, spectrogramImage }) {
   const canvasRef = useRef(null);
   const offscreenRef = useRef(null);
   const audioCtxRef = useRef(null);
@@ -131,13 +48,25 @@ export default function MiniSpectrogram({ audioUrl, frequencyMin, frequencyMax, 
   const [loaded, setLoaded] = useState(false);
   const [playing, setPlaying] = useState(false);
 
+  const freqMinHz = toHz(spectrogramMin);
+  const freqMaxHz = toHz(spectrogramMax);
+
+  // Only trust a stored picture that was baked from this audio with these exact
+  // parameters. When one exists the audio is not fetched until play is pressed.
+  const bakedMeta = useMemo(
+    () => (isSpectrogramMetaFresh(spectrogramImage, { audioUrl, freqMinHz, freqMaxHz, fftSize })
+      ? spectrogramImage
+      : null),
+    [spectrogramImage, audioUrl, freqMinHz, freqMaxHz, fftSize],
+  );
+
   const renderAt = useCallback((t) => {
     const canvas = canvasRef.current;
     const offscreen = offscreenRef.current;
     if (!canvas || !offscreen) return;
     const ctx = canvas.getContext('2d');
     const W = canvas.width, H = canvas.height;
-    const dur = audioBufferRef.current?.duration || 0;
+    const dur = audioBufferRef.current?.duration || bakedMeta?.duration || 0;
     const offW = offscreen.width;
     const centerX = W / 2;
     const playheadOff = dur > 0 ? (t / dur) * offW : 0;
@@ -150,6 +79,16 @@ export default function MiniSpectrogram({ audioUrl, frequencyMin, frequencyMax, 
     ctx.strokeStyle = '#BB9F06';
     ctx.lineWidth = 1.5;
     ctx.beginPath(); ctx.moveTo(playheadScreen, 0); ctx.lineTo(playheadScreen, H); ctx.stroke();
+  }, [bakedMeta]);
+
+  /** Size the canvas to its box and return the device-pixel dimensions. */
+  const sizeCanvas = useCallback(() => {
+    const canvas = canvasRef.current;
+    const dpr = window.devicePixelRatio || 1;
+    const W = canvas ? canvas.offsetWidth * dpr : 240;
+    const H = CANVAS_H * dpr;
+    if (canvas) { canvas.width = W; canvas.height = H; }
+    return { W, H };
   }, []);
 
   const stopSource = useCallback((resetOffset = true) => {
@@ -198,22 +137,16 @@ export default function MiniSpectrogram({ audioUrl, frequencyMin, frequencyMax, 
       audioCtxRef.current = ctx;
       const audio = await ctx.decodeAudioData(buf);
       audioBufferRef.current = audio;
-      const canvas = canvasRef.current;
-      const dpr = window.devicePixelRatio || 1;
-      const W = canvas ? canvas.offsetWidth * dpr : 240;
-      const H = CANVAS_H * dpr;
-      if (canvas) { canvas.width = W; canvas.height = H; }
-      offscreenRef.current = buildOffscreen(
-        audio, W, H,
-        frequencyMin ? frequencyMin * 1000 : null,
-        frequencyMax ? frequencyMax * 1000 : null,
-        fftSize,
-      );
+      // The baked picture is already on screen — decoding here is only for playback.
+      if (!bakedMeta) {
+        const { W, H } = sizeCanvas();
+        offscreenRef.current = buildOffscreen(audio, W, H, freqMinHz, freqMaxHz, fftSize);
+        renderAt(0);
+      }
       setLoaded(true);
-      renderAt(0);
     } catch {}
     setLoading(false);
-  }, [audioUrl, frequencyMin, frequencyMax, fftSize, loaded, loading, renderAt]);
+  }, [audioUrl, freqMinHz, freqMaxHz, fftSize, loaded, loading, renderAt, bakedMeta, sizeCanvas]);
 
   const play = useCallback(async () => {
     await loadAudio();
@@ -245,7 +178,28 @@ export default function MiniSpectrogram({ audioUrl, frequencyMin, frequencyMax, 
     animRef.current = requestAnimationFrame(drawFrame);
   }, [loadAudio, stopSource, drawFrame, renderAt]);
 
-  useEffect(() => { loadAudio(); }, [audioUrl]);
+  // With a baked picture the audio is fetched only when the visitor presses play;
+  // without one the spectrogram can only be drawn by decoding the file up front.
+  useEffect(() => {
+    if (!bakedMeta) loadAudio();
+  }, [audioUrl, bakedMeta]);
+
+  useEffect(() => {
+    if (!bakedMeta) return undefined;
+    let cancelled = false;
+    const img = new Image();
+    img.onload = () => {
+      if (cancelled) return;
+      const { W, H } = sizeCanvas();
+      const dur = audioBufferRef.current?.duration || bakedMeta.duration || 0;
+      offscreenRef.current = scaleImageToOffscreen(img, offscreenWidthFor(W, dur, VISIBLE_SECONDS), H);
+      renderAt(pauseOffsetRef.current);
+    };
+    // A broken picture falls back to the live path rather than showing nothing.
+    img.onerror = () => { if (!cancelled) loadAudio(); };
+    img.src = bakedMeta.url;
+    return () => { cancelled = true; };
+  }, [bakedMeta, sizeCanvas, renderAt]);
 
   useEffect(() => () => {
     cancelAnimationFrame(animRef.current);
