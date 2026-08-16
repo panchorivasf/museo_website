@@ -15,6 +15,7 @@ import SpectrogramPlayer from '@/components/audio/SpectrogramPlayer';
 import { generateSpectrogramImage, hasFreshSpectrogramImage } from '@/lib/prerenderSpectrogram';
 import { spectrogramSettings } from '@/lib/spectrogram';
 import { diffChars } from '@/lib/textDiff';
+import { referencesWithGbif } from '@/lib/gbif';
 
 const fftSizeOptions = [512, 1024, 2048, 4096, 8192, 16384];
 
@@ -131,6 +132,18 @@ export default function SpeciesForm({ species, onClose }) {
           url: r.url?.trim() || null,
           url_label: r.url_label?.trim() || null,
         }));
+      // New species cite their taxonomic source automatically. Only on creation:
+      // on later saves the admin's own reference list is left alone, so a GBIF
+      // entry that was deliberately removed does not come back on every edit.
+      // Older records are handled by the backfill in the Especies list.
+      if (!isEditing) {
+        try {
+          const withGbif = await referencesWithGbif(data);
+          if (withGbif) data.references = withGbif;
+        } catch {
+          // GBIF being unreachable or not recognising the name must never block a save.
+        }
+      }
       data.spectrogram_image = await ensureSpectrogramImage(data);
       let speciesId = species?.id;
       if (isEditing) {

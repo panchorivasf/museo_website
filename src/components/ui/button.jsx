@@ -34,11 +34,16 @@ const buttonVariants = cva(
   }
 )
 
-const Button = React.forwardRef(({ className, variant, size, asChild = false, ...props }, ref) => {
+const Button = React.forwardRef(({ className, variant, size, asChild = false, type, ...props }, ref) => {
   const Comp = asChild ? Slot : "button"
   return (
     (<Comp
       className={cn(buttonVariants({ variant, size, className }))}
+      // A bare <button> inside a <form> defaults to type="submit", so every button
+      // nested in a form — player controls, map pickers, block editors — submitted
+      // it when clicked. Forms opt into submission explicitly with type="submit".
+      // Skipped for asChild, where the rendered element may not be a button at all.
+      type={asChild ? type : (type || "button")}
       ref={ref}
       {...props} />)
   );

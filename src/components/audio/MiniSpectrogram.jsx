@@ -213,6 +213,7 @@ export default function MiniSpectrogram({ audioUrl, spectrogramMin, spectrogramM
       <canvas ref={canvasRef} style={{ display: 'block', width: '100%', height: '100%' }} />
 
       <button
+        type="button"
         onClick={playing ? pause : play}
         style={{
           position: 'absolute', bottom: '5px', left: '5px',
