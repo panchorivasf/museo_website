@@ -123,6 +123,27 @@ function buildSpectrogramImage(audioBuffer, canvasWidth, canvasHeight, freqMinHz
   return { offscreen, visMinHz: freqMinHz ?? 0, visMaxHz: freqMaxHz ?? nyquist };
 }
 
+// Built spectrograms are expensive (a full FFT pass over the file plus a per-pixel
+// paint), and identical for the same audio at the same size and settings. Keep the
+// last few keyed on exactly the inputs that change the image, so remounts, repeat
+// visits and play/pause reuse the canvas instead of recomputing it.
+const SPECTROGRAM_CACHE_LIMIT = 3;
+const spectrogramCache = new Map();
+
+const spectrogramCacheKey = (url, w, h, fftSize, minHz, maxHz) =>
+  `${url}|${w}x${h}|${fftSize || 'auto'}|${minHz ?? ''}|${maxHz ?? ''}`;
+
+function getSpectrogramImage(key, audioBuffer, w, h, minHz, maxHz, fftSize) {
+  const cached = spectrogramCache.get(key);
+  if (cached) return cached;
+  const result = buildSpectrogramImage(audioBuffer, w, h, minHz, maxHz, fftSize);
+  spectrogramCache.set(key, result);
+  while (spectrogramCache.size > SPECTROGRAM_CACHE_LIMIT) {
+    spectrogramCache.delete(spectrogramCache.keys().next().value);
+  }
+  return result;
+}
+
 export default function SpectrogramPlayer({ audioUrl, altText, spectrogramMin, spectrogramMax, fftSize }) {
   const canvasRef = useRef(null);
   const offscreenRef = useRef(null);
@@ -136,6 +157,7 @@ export default function SpectrogramPlayer({ audioUrl, altText, spectrogramMin, s
   const playbackRateRef = useRef(1);
   const isPlayingRef = useRef(false);
   const scrubbing = useRef(false);
+  const builtKeyRef = useRef(null);
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -234,18 +256,35 @@ export default function SpectrogramPlayer({ audioUrl, altText, spectrogramMin, s
     setDuration(buffer.duration);
     setNyquist(buffer.sampleRate / 2);
 
-    const canvas = canvasRef.current;
-    const w = canvas ? canvas.width : 800;
-    const h = canvas ? canvas.height : 200;
-    const freqMinHz = spectrogramMin ? spectrogramMin * 1000 : null;
-    const freqMaxHz = spectrogramMax ? spectrogramMax * 1000 : null;
-    const result = buildSpectrogramImage(buffer, w, h, freqMinHz, freqMaxHz, fftSize);
-    offscreenRef.current = result.offscreen;
-    setVisFreqRange({ min: result.visMinHz, max: result.visMaxHz });
-
+    // The image itself is built by buildIfNeeded once isLoaded flips, so the
+    // canvas is sized correctly and we never build the same thing twice.
     setIsLoaded(true);
     setIsLoading(false);
-  }, [audioUrl, isLoaded, fftSize]);
+  }, [audioUrl, isLoaded]);
+
+  // Build the offscreen spectrogram only when something that changes the image
+  // changes: the audio, the canvas pixel size, or the frequency/FFT settings.
+  const buildIfNeeded = useCallback(() => {
+    const canvas = canvasRef.current;
+    const buffer = audioBufferRef.current;
+    if (!canvas || !buffer || !isLoaded) return;
+
+    const freqMinHz = spectrogramMin ? spectrogramMin * 1000 : null;
+    const freqMaxHz = spectrogramMax ? spectrogramMax * 1000 : null;
+    const key = spectrogramCacheKey(audioUrl, canvas.width, canvas.height, fftSize, freqMinHz, freqMaxHz);
+    if (builtKeyRef.current === key && offscreenRef.current) return;
+
+    const result = getSpectrogramImage(key, buffer, canvas.width, canvas.height, freqMinHz, freqMaxHz, fftSize);
+    offscreenRef.current = result.offscreen;
+    builtKeyRef.current = key;
+    // Bail out of the state update when the range is unchanged: a fresh object
+    // here would invalidate renderAtTime -> drawStatic -> this effect, and rebuild forever.
+    setVisFreqRange(prev =>
+      prev.min === result.visMinHz && prev.max === result.visMaxHz
+        ? prev
+        : { min: result.visMinHz, max: result.visMaxHz }
+    );
+  }, [isLoaded, audioUrl, spectrogramMin, spectrogramMax, fftSize]);
 
   // Draw static spectrogram once loaded
   // Auto-load on mount
@@ -385,27 +424,35 @@ export default function SpectrogramPlayer({ audioUrl, altText, spectrogramMin, s
     };
   }, []);
 
-  // Resize canvas and rebuild
+  // Size the canvas to its box, then (re)build only if that actually changed the
+  // pixel dimensions. Resize events are debounced so dragging a window edge can't
+  // fire a full FFT per event.
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const resize = () => {
+    let timer;
+    const applySize = () => {
       const dpr = window.devicePixelRatio || 1;
-      canvas.width = canvas.offsetWidth * dpr;
-      canvas.height = canvas.offsetHeight * dpr;
-      if (isLoaded && audioBufferRef.current) {
-        const freqMinHz = spectrogramMin ? spectrogramMin * 1000 : null;
-        const freqMaxHz = spectrogramMax ? spectrogramMax * 1000 : null;
-        const result = buildSpectrogramImage(audioBufferRef.current, canvas.width, canvas.height, freqMinHz, freqMaxHz, fftSize);
-        offscreenRef.current = result.offscreen;
-        setVisFreqRange({ min: result.visMinHz, max: result.visMaxHz });
-        if (!isPlaying) drawStatic();
+      const w = Math.round(canvas.offsetWidth * dpr);
+      const h = Math.round(canvas.offsetHeight * dpr);
+      if (w > 0 && h > 0 && (canvas.width !== w || canvas.height !== h)) {
+        canvas.width = w;
+        canvas.height = h;
       }
+      buildIfNeeded();
+      if (!isPlayingRef.current) drawStatic();
     };
-    resize();
-    window.addEventListener('resize', resize);
-    return () => window.removeEventListener('resize', resize);
-  }, [isLoaded, isPlaying, drawStatic, fftSize]);
+    applySize();
+    const onResize = () => {
+      clearTimeout(timer);
+      timer = setTimeout(applySize, 150);
+    };
+    window.addEventListener('resize', onResize);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('resize', onResize);
+    };
+  }, [buildIfNeeded, drawStatic]);
 
   const formatTime = (s) => `${Math.floor(s / 60)}:${Math.floor(s % 60).toString().padStart(2, '0')}`;
   const speedLabel = playbackRate < 1 ? `${playbackRate}× (−${Math.round((1 - playbackRate) * 100)}% freq)` : `${playbackRate}×`;
