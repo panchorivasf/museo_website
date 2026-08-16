@@ -8,14 +8,15 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Slider } from '@/components/ui/slider';
-import { X, Upload, Loader2, Map, BadgeCheck, AlertTriangle, Plus, Trash2, ChevronUp, ChevronDown, ImageDown, RefreshCw } from 'lucide-react';
+import { X, Upload, Loader2, Map, BadgeCheck, AlertTriangle, Plus, Trash2, ChevronUp, ChevronDown, ImageDown, RefreshCw, ShieldCheck } from 'lucide-react';
 import LocationPicker from './LocationPicker';
 import RecordistSelect from './RecordistSelect';
 import SpectrogramPlayer from '@/components/audio/SpectrogramPlayer';
 import { generateSpectrogramImage, hasFreshSpectrogramImage } from '@/lib/prerenderSpectrogram';
 import { spectrogramSettings } from '@/lib/spectrogram';
 import { diffChars } from '@/lib/textDiff';
-import { referencesWithGbif } from '@/lib/gbif';
+import { enrichSpeciesFromSources } from '@/lib/speciesSources';
+import { IUCN_CATEGORIES } from '@/lib/iucn';
 
 const fftSizeOptions = [512, 1024, 2048, 4096, 8192, 16384];
 
@@ -70,6 +71,7 @@ export default function SpeciesForm({ species, onClose }) {
     order: species?.order || '',
     family: species?.family || '',
     conservation_status: species?.conservation_status || '',
+    iucn_global_status: species?.iucn_global_status || '',
     image_author: species?.image_author || '',
     image_license: species?.image_license || '',
     image_source_platform: species?.image_source_platform || '',
@@ -132,16 +134,17 @@ export default function SpeciesForm({ species, onClose }) {
           url: r.url?.trim() || null,
           url_label: r.url_label?.trim() || null,
         }));
-      // New species cite their taxonomic source automatically. Only on creation:
-      // on later saves the admin's own reference list is left alone, so a GBIF
-      // entry that was deliberately removed does not come back on every edit.
-      // Older records are handled by the backfill in the Especies list.
+      // New species pull their taxonomic source and global IUCN category
+      // automatically. Only on creation: on later saves the admin's own reference
+      // list and category are left alone, so entries that were deliberately removed
+      // or corrected do not come back on every edit. Older records are handled by
+      // the backfill in the Especies list.
       if (!isEditing) {
         try {
-          const withGbif = await referencesWithGbif(data);
-          if (withGbif) data.references = withGbif;
+          const { patch } = await enrichSpeciesFromSources(data);
+          Object.assign(data, patch);
         } catch {
-          // GBIF being unreachable or not recognising the name must never block a save.
+          // A source being unreachable, or not recognising the name, must never block a save.
         }
       }
       data.spectrogram_image = await ensureSpectrogramImage(data);
@@ -296,6 +299,37 @@ export default function SpeciesForm({ species, onClose }) {
 
   const acceptGbifName = () => {
     applyGbifClassification(gbifResult, { scientific_name: gbifCanonical });
+  };
+
+  const [iucnChecking, setIucnChecking] = useState(false);
+  const [iucnMessage, setIucnMessage] = useState(null);
+
+  /**
+   * Fill the global IUCN category from the Red List and add its citation, so an
+   * existing species can be completed without waiting for the bulk backfill.
+   * Writes into the form only — nothing is saved until the admin submits.
+   */
+  const lookupIucn = async () => {
+    setIucnChecking(true);
+    setIucnMessage(null);
+    try {
+      const { patch, notes } = await enrichSpeciesFromSources({ ...form, iucn_global_status: '' });
+      if (patch.references || patch.iucn_global_status) {
+        setForm(prev => ({ ...prev, ...patch }));
+      }
+      if (patch.iucn_global_status && patch.iucn_global_status !== 'NE') {
+        setIucnMessage({
+          tone: 'ok',
+          text: `Clasificación ${patch.iucn_global_status} obtenida${patch.references ? ' y citada en Referencias' : ''}.`,
+        });
+      } else {
+        setIucnMessage({ tone: 'warn', text: notes[0] || 'Sin evaluación en la Lista Roja.' });
+      }
+    } catch (err) {
+      setIucnMessage({ tone: 'error', text: err.message });
+    } finally {
+      setIucnChecking(false);
+    }
   };
 
   const handleSubmit = (e) => {
@@ -472,6 +506,29 @@ export default function SpeciesForm({ species, onClose }) {
                 {conservationOptions.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
               </SelectContent>
             </Select>
+          </div>
+          <div className="space-y-1.5">
+            <Label>Clasificación Global IUCN</Label>
+            <Select value={form.iucn_global_status} onValueChange={v => update('iucn_global_status', v)}>
+              <SelectTrigger><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
+              <SelectContent>
+                {IUCN_CATEGORIES.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Button
+              type="button" variant="outline" size="sm"
+              className="gap-1.5 text-xs h-7"
+              disabled={!form.scientific_name.trim() || iucnChecking}
+              onClick={lookupIucn}
+            >
+              {iucnChecking ? <Loader2 className="w-3 h-3 animate-spin" /> : <ShieldCheck className="w-3 h-3" />}
+              Consultar Lista Roja IUCN
+            </Button>
+            {iucnMessage && (
+              <p className={`text-xs ${iucnMessage.tone === 'error' ? 'text-destructive' : iucnMessage.tone === 'warn' ? 'text-ocher' : 'text-secondary'}`}>
+                {iucnMessage.text}
+              </p>
+            )}
           </div>
         </div>
 

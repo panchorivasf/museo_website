@@ -46,24 +46,3 @@ export function buildGbifReference(match, { now = new Date() } = {}) {
     url_label: 'Ver en GBIF',
   };
 }
-
-/**
- * References for `record` with the GBIF citation appended, or null when there is
- * nothing to do (no scientific name, or GBIF is already cited). Throws when GBIF
- * cannot identify the name, so callers can report why a record was left alone.
- */
-export async function referencesWithGbif(record, options) {
-  const name = record?.scientific_name?.trim();
-  const references = Array.isArray(record?.references) ? record.references : [];
-  if (!name || hasGbifReference(references)) return null;
-
-  const match = await matchGbifName(name);
-  if (!isUsableGbifMatch(match)) {
-    throw new Error(
-      match?.matchType === 'HIGHERRANK'
-        ? `GBIF solo reconoce «${match.canonicalName || ''}», no la especie`
-        : 'sin coincidencia en GBIF',
-    );
-  }
-  return [...references, buildGbifReference(match, options)];
-}

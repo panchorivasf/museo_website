@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import SpeciesForm from '@/components/admin/SpeciesForm';
 import SpectrogramBulkGenerator from '@/components/admin/SpectrogramBulkGenerator';
-import GbifReferenceBackfill from '@/components/admin/GbifReferenceBackfill';
+import TaxonomicSourcesBackfill from '@/components/admin/TaxonomicSourcesBackfill';
 import { scrollToTop } from '@/lib/utils';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -95,7 +95,7 @@ export default function AdminSpecies() {
         describe={sp => sp.common_name || sp.scientific_name}
       />
 
-      <GbifReferenceBackfill species={species} />
+      <TaxonomicSourcesBackfill species={species} />
 
       <div className="flex flex-col sm:flex-row gap-2 mb-4">
         <div className="relative flex-1">

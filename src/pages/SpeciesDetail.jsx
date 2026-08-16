@@ -324,6 +324,14 @@ export default function SpeciesDetail() {
                 </Badge>
               </div>
             )}
+            {species.iucn_global_status && (
+              <div className="pt-1 space-y-1">
+                <p className="text-xs font-mono text-muted-foreground uppercase">Clasificación Global IUCN</p>
+                <Badge className={`${conservationColors[species.iucn_global_status] || 'bg-muted text-muted-foreground'} text-xs`}>
+                  {species.iucn_global_status} — {conservationLabels[species.iucn_global_status] || ''}
+                </Badge>
+              </div>
+            )}
           </div>
 
           {species.description && (

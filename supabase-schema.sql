@@ -30,6 +30,11 @@ create table if not exists species (
 -- Migration for databases created before the references column existed
 alter table species add column if not exists "references" jsonb not null default '[]';
 
+-- Global IUCN Red List category (EX/EW/CR/EN/VU/NT/LC/DD), fetched in the admin.
+-- Kept separate from conservation_status, which records the classification used
+-- locally: a species can be Least Concern globally and threatened nationally.
+alter table species add column if not exists iucn_global_status text;
+
 -- Pre-rendered spectrogram picture, baked in the admin from the row's own
 -- spectrogram_min / spectrogram_max / fft_size settings so visitors download an
 -- image instead of running an FFT in the browser. Shape (see src/lib/spectrogram.js):
