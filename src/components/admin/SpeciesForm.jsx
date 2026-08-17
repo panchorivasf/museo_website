@@ -8,13 +8,14 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Slider } from '@/components/ui/slider';
-import { X, Upload, Loader2, Map, BadgeCheck, AlertTriangle, Plus, Trash2, ChevronUp, ChevronDown, ImageDown, RefreshCw, ShieldCheck, Link2, Search } from 'lucide-react';
+import { X, Upload, Loader2, Map, BadgeCheck, AlertTriangle, Plus, Trash2, ImageDown, RefreshCw, ShieldCheck, Link2, Search } from 'lucide-react';
 import LocationPicker from './LocationPicker';
 import RecordistSelect from './RecordistSelect';
 import SpectrogramPlayer from '@/components/audio/SpectrogramPlayer';
 import { generateSpectrogramImage, hasFreshSpectrogramImage } from '@/lib/prerenderSpectrogram';
 import { spectrogramSettings } from '@/lib/spectrogram';
 import { diffChars } from '@/lib/textDiff';
+import { sortReferences } from '@/lib/references';
 import { enrichSpeciesFromSources } from '@/lib/speciesSources';
 import { IUCN_CATEGORIES } from '@/lib/iucn';
 import {
@@ -142,6 +143,8 @@ export default function SpeciesForm({ species, onClose }) {
           url: r.url?.trim() || null,
           url_label: r.url_label?.trim() || null,
         }));
+      // Stored in display order (GBIF, IUCN, then alphabetical) — the sources added
+      // further down append to the end, so this runs again just before writing.
       // New species pull their taxonomic source and global IUCN category
       // automatically. Only on creation: on later saves the admin's own reference
       // list and category are left alone, so entries that were deliberately removed
@@ -155,6 +158,7 @@ export default function SpeciesForm({ species, onClose }) {
           // A source being unreachable, or not recognising the name, must never block a save.
         }
       }
+      data.references = sortReferences(data.references);
       data.spectrogram_image = await ensureSpectrogramImage(data);
       let speciesId = species?.id;
       if (isEditing) {
@@ -241,14 +245,6 @@ export default function SpeciesForm({ species, onClose }) {
     }));
   const removeReference = (index) =>
     setForm(prev => ({ ...prev, references: prev.references.filter((_, i) => i !== index) }));
-  const moveReference = (index, delta) =>
-    setForm(prev => {
-      const next = [...prev.references];
-      const target = index + delta;
-      if (target < 0 || target >= next.length) return prev;
-      [next[index], next[target]] = [next[target], next[index]];
-      return { ...prev, references: next };
-    });
 
   const [gbifChecking, setGbifChecking] = useState(false);
   const [gbifResult, setGbifResult] = useState(null);
@@ -695,6 +691,9 @@ export default function SpeciesForm({ species, onClose }) {
             Admite Markdown: <code className="font-mono">*cursiva*</code> para nombres científicos y títulos de revistas,
             <code className="font-mono"> **negrita**</code>, y <code className="font-mono">[texto](url)</code> para enlaces.
           </p>
+          <p className="text-xs text-muted-foreground">
+            El orden es automático: primero GBIF, luego IUCN y después el resto alfabéticamente. Se reordena al guardar.
+          </p>
           {form.references.length === 0 ? (
             <p className="text-xs text-muted-foreground">
               Sin referencias. Añade las citas de artículos o libros en que se basa esta ficha; aparecerán como apéndice al final de la página de la especie.
@@ -702,7 +701,6 @@ export default function SpeciesForm({ species, onClose }) {
           ) : (
             form.references.map((ref, i) => (
               <div key={i} className="flex gap-2 items-start">
-                <span className="text-xs font-mono text-muted-foreground w-5 shrink-0 text-right pt-2.5">{i + 1}.</span>
                 <div className="flex-1 space-y-1.5 min-w-0">
                   <Textarea
                     value={ref.citation}
@@ -724,20 +722,6 @@ export default function SpeciesForm({ species, onClose }) {
                   </div>
                 </div>
                 <div className="flex flex-col shrink-0">
-                  <Button
-                    type="button" variant="ghost" size="icon"
-                    onClick={() => moveReference(i, -1)} disabled={i === 0}
-                    className="h-6 w-8 text-muted-foreground disabled:opacity-30" aria-label="Subir referencia"
-                  >
-                    <ChevronUp className="w-3.5 h-3.5" />
-                  </Button>
-                  <Button
-                    type="button" variant="ghost" size="icon"
-                    onClick={() => moveReference(i, 1)} disabled={i === form.references.length - 1}
-                    className="h-6 w-8 text-muted-foreground disabled:opacity-30" aria-label="Bajar referencia"
-                  >
-                    <ChevronDown className="w-3.5 h-3.5" />
-                  </Button>
                   <Button
                     type="button" variant="ghost" size="icon"
                     onClick={() => removeReference(i)}

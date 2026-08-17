@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import SpectrogramPlayer from '@/components/audio/SpectrogramPlayer';
 import { spectrogramSettings } from '@/lib/spectrogram';
+import { sortReferences } from '@/lib/references';
 import ReactMarkdown from 'react-markdown';
 import SpeciesLocationMap from '@/components/species/SpeciesLocationMap';
 
@@ -388,12 +389,13 @@ export default function SpeciesDetail() {
             <BookOpen className="w-3.5 h-3.5 text-secondary" />
             Referencias
           </h3>
-          <ol className="space-y-3">
-            {species.references.map((ref, i) => {
+          {/* Ordered on render, so entries saved before the rule existed still
+              appear in the right order without being re-saved. */}
+          <ul className="space-y-3">
+            {sortReferences(species.references).map((ref, i) => {
               const doi = ref.url ? doiFromUrl(ref.url) : null;
               return (
-                <li key={i} className="flex gap-3 text-sm text-muted-foreground leading-relaxed">
-                  <span className="font-mono text-xs text-secondary shrink-0 pt-0.5">[{i + 1}]</span>
+                <li key={i} className="text-sm text-muted-foreground leading-relaxed">
                   <span className="min-w-0">
                     <ReactMarkdown components={inlineMarkdownComponents}>
                       {ref.citation}
@@ -420,7 +422,7 @@ export default function SpeciesDetail() {
                 </li>
               );
             })}
-          </ol>
+          </ul>
         </div>
       )}
     </div>
