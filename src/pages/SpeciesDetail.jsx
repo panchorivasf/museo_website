@@ -48,6 +48,11 @@ const inlineMarkdownComponents = {
 // citation's permanent identifier without becoming the visible call to action.
 const doiFromUrl = (url) => url.match(/^https?:\/\/(?:dx\.)?doi\.org\/(10\.\S+)$/i)?.[1] || null;
 
+// The admin lists "Otro" for image sources with no named platform. That label is
+// meaningful when curating, but says nothing to a visitor, so the credit link
+// reads "Link" instead. The stored value is unchanged.
+const platformLinkLabel = (platform) => (platform === 'Otro' ? 'Link' : platform);
+
 const conservationColors = {
   LC: 'bg-green-100 text-green-800', NT: 'bg-yellow-100 text-yellow-800',
   VU: 'bg-orange-100 text-orange-800', EN: 'bg-red-100 text-red-800',
@@ -198,7 +203,7 @@ export default function SpeciesDetail() {
                   {species.image_license && <span>{species.image_license} </span>}
                   {!species.image_license?.startsWith('©') && '© '}{species.image_author}
                   {species.image_source_platform && species.image_source_url && (
-                    <> · <a href={species.image_source_url} target="_blank" rel="noopener noreferrer" className="underline hover:text-primary">{species.image_source_platform}</a></>
+                    <> · <a href={species.image_source_url} target="_blank" rel="noopener noreferrer" className="underline hover:text-primary">{platformLinkLabel(species.image_source_platform)}</a></>
                   )}
                   {species.image_source_platform && !species.image_source_url && (
                     <> · {species.image_source_platform}</>
