@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Slider } from '@/components/ui/slider';
-import { X, Upload, Loader2, Map, BadgeCheck, AlertTriangle, Plus, Trash2, ChevronUp, ChevronDown, ImageDown, RefreshCw, ShieldCheck } from 'lucide-react';
+import { X, Upload, Loader2, Map, BadgeCheck, AlertTriangle, Plus, Trash2, ChevronUp, ChevronDown, ImageDown, RefreshCw, ShieldCheck, Link2, Search } from 'lucide-react';
 import LocationPicker from './LocationPicker';
 import RecordistSelect from './RecordistSelect';
 import SpectrogramPlayer from '@/components/audio/SpectrogramPlayer';
@@ -17,6 +17,9 @@ import { spectrogramSettings } from '@/lib/spectrogram';
 import { diffChars } from '@/lib/textDiff';
 import { enrichSpeciesFromSources } from '@/lib/speciesSources';
 import { IUCN_CATEGORIES } from '@/lib/iucn';
+import {
+  GBIF_CLASS_BY_TAXON, normalizeGbifTaxon, resolveAcceptedUsage, searchGbifByEpithet, specificEpithet,
+} from '@/lib/gbif';
 
 const fftSizeOptions = [512, 1024, 2048, 4096, 8192, 16384];
 
@@ -72,6 +75,8 @@ export default function SpeciesForm({ species, onClose }) {
     family: species?.family || '',
     conservation_status: species?.conservation_status || '',
     iucn_global_status: species?.iucn_global_status || '',
+    gbif_usage_key: species?.gbif_usage_key || null,
+    gbif_scientific_name: species?.gbif_scientific_name || '',
     image_author: species?.image_author || '',
     image_license: species?.image_license || '',
     image_source_platform: species?.image_source_platform || '',
@@ -126,6 +131,9 @@ export default function SpeciesForm({ species, onClose }) {
       for (const field of numericFields) {
         data[field] = data[field] === '' || data[field] == null ? null : parseFloat(data[field]);
       }
+      // Blank cross-authority link fields are stored as null, not empty strings
+      data.gbif_usage_key = data.gbif_usage_key || null;
+      data.gbif_scientific_name = data.gbif_scientific_name?.trim() || null;
       // Drop half-filled reference rows and normalise blank URLs to null
       data.references = (data.references || [])
         .filter(r => r.citation?.trim())
@@ -299,6 +307,60 @@ export default function SpeciesForm({ species, onClose }) {
 
   const acceptGbifName = () => {
     applyGbifClassification(gbifResult, { scientific_name: gbifCanonical });
+  };
+
+  // Linking this species to a GBIF taxon whose genus differs from the authority
+  // used here: search the backbone for species sharing the epithet within the same
+  // class, and remember the chosen taxon's key. scientific_name is never touched.
+  const [candidates, setCandidates] = useState(null);
+  const [candidateSearching, setCandidateSearching] = useState(false);
+  const [candidateError, setCandidateError] = useState(null);
+
+  const gbifClass = GBIF_CLASS_BY_TAXON[form.taxon];
+  const epithet = specificEpithet(form.scientific_name);
+
+  const searchCandidates = async () => {
+    setCandidateSearching(true);
+    setCandidateError(null);
+    setCandidates(null);
+    try {
+      const results = await searchGbifByEpithet(epithet, gbifClass?.key);
+      setCandidates(results);
+      if (!results.length) {
+        setCandidateError(`Sin especies con el epíteto «${epithet}» en ${gbifClass?.label || 'GBIF'}.`);
+      }
+    } catch (err) {
+      setCandidateError(err.message);
+    } finally {
+      setCandidateSearching(false);
+    }
+  };
+
+  /** Store the accepted taxon behind the chosen candidate, synonym or not. */
+  const linkCandidate = async (candidate) => {
+    setCandidateSearching(true);
+    setCandidateError(null);
+    try {
+      const accepted = normalizeGbifTaxon(await resolveAcceptedUsage(candidate));
+      setForm(prev => ({
+        ...prev,
+        gbif_usage_key: accepted.key,
+        gbif_scientific_name: accepted.scientificName || accepted.canonicalName || '',
+        order: accepted.order || prev.order,
+        family: accepted.family || prev.family,
+      }));
+      setCandidates(null);
+      setIucnMessage(null);
+    } catch (err) {
+      setCandidateError(err.message);
+    } finally {
+      setCandidateSearching(false);
+    }
+  };
+
+  const unlinkGbif = () => {
+    setForm(prev => ({ ...prev, gbif_usage_key: null, gbif_scientific_name: '' }));
+    setIucnMessage(null);
   };
 
   const [iucnChecking, setIucnChecking] = useState(false);
@@ -488,6 +550,72 @@ export default function SpeciesForm({ species, onClose }) {
                 )}
               </div>
             )}
+
+            {/* Cross-authority link: this site keeps its own binomial while GBIF and
+                IUCN are consulted through the taxon selected here. */}
+            <div className="text-xs rounded-md border border-border bg-muted/40 p-2 mt-1 space-y-1.5">
+              {form.gbif_usage_key ? (
+                <>
+                  <p className="flex items-center gap-1.5 text-secondary font-medium">
+                    <Link2 className="w-3.5 h-3.5 shrink-0" />
+                    Vinculado en GBIF: <span className="italic">{form.gbif_scientific_name}</span>
+                  </p>
+                  <p className="text-muted-foreground">
+                    GBIF e IUCN se consultan con este taxón (clave {form.gbif_usage_key}); el nombre
+                    de la ficha se mantiene como «{form.scientific_name.trim()}».
+                  </p>
+                  <Button type="button" variant="outline" size="sm" className="gap-1.5 text-xs h-7" onClick={unlinkGbif}>
+                    <X className="w-3 h-3" /> Desvincular
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <p className="text-muted-foreground">
+                    ¿GBIF ubica esta especie en otro género? Busca por epíteto dentro de
+                    {gbifClass ? ` ${gbifClass.label}` : ' su clase'} y vincula el taxón correcto sin
+                    cambiar el nombre de la ficha.
+                  </p>
+                  <Button
+                    type="button" variant="outline" size="sm"
+                    className="gap-1.5 text-xs h-7"
+                    disabled={!epithet || candidateSearching}
+                    onClick={searchCandidates}
+                  >
+                    {candidateSearching ? <Loader2 className="w-3 h-3 animate-spin" /> : <Search className="w-3 h-3" />}
+                    Buscar por epíteto «{epithet || '—'}»
+                  </Button>
+                </>
+              )}
+
+              {candidateError && <p className="text-ocher">{candidateError}</p>}
+
+              {candidates?.length > 0 && (
+                <ul className="space-y-1 pt-1">
+                  {candidates.map(c => (
+                    <li key={c.key} className="flex items-start justify-between gap-2 border-t border-border/60 pt-1">
+                      <span className="min-w-0">
+                        <span className="italic text-primary">{c.canonicalName}</span>{' '}
+                        <span className={c.taxonomicStatus === 'ACCEPTED' ? 'text-secondary' : 'text-muted-foreground'}>
+                          ({c.taxonomicStatus === 'ACCEPTED' ? 'aceptado' : 'sinónimo'})
+                        </span>
+                        <span className="block text-muted-foreground">
+                          {[c.family, c.order].filter(Boolean).join(' · ')}
+                          {c.taxonomicStatus !== 'ACCEPTED' && c.accepted && ` → ${c.accepted}`}
+                        </span>
+                      </span>
+                      <Button
+                        type="button" variant="outline" size="sm"
+                        className="gap-1.5 text-xs h-7 shrink-0"
+                        disabled={candidateSearching}
+                        onClick={() => linkCandidate(c)}
+                      >
+                        <Link2 className="w-3 h-3" /> Vincular
+                      </Button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
           </div>
           <div className="space-y-1.5">
             <Label>Taxón *</Label>

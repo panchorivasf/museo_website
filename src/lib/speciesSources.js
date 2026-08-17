@@ -1,7 +1,34 @@
 import {
-  buildGbifReference, hasGbifReference, isUsableGbifMatch, matchGbifName,
+  buildGbifReference, fetchGbifUsage, hasGbifReference, isUsableGbifMatch,
+  matchGbifName, normalizeGbifTaxon, resolveAcceptedUsage,
 } from '@/lib/gbif';
 import { buildIucnReference, fetchIucnAssessment, hasIucnReference } from '@/lib/iucn';
+
+/**
+ * The GBIF taxon to read this species from.
+ *
+ * A species linked to a GBIF taxon by key is read from that key: this site keeps
+ * its own authority for `scientific_name` (Birds of the World, for instance),
+ * while GBIF may place the species in another genus, and matching by name would
+ * either fail or land on the wrong taxon. Everything else is matched by name.
+ */
+export async function resolveGbifTaxon(record) {
+  if (record?.gbif_usage_key) {
+    const usage = await resolveAcceptedUsage(await fetchGbifUsage(record.gbif_usage_key));
+    return normalizeGbifTaxon(usage);
+  }
+  const name = record?.scientific_name?.trim();
+  if (!name) throw new Error('sin nombre científico');
+  const match = await matchGbifName(name);
+  if (!isUsableGbifMatch(match)) {
+    throw new Error(
+      match?.matchType === 'HIGHERRANK'
+        ? `GBIF solo reconoce «${match.canonicalName || ''}», no la especie`
+        : 'sin coincidencia en GBIF',
+    );
+  }
+  return normalizeGbifTaxon(match);
+}
 
 /**
  * Fills a species' external-source fields in one pass: the GBIF taxonomic-source
@@ -27,30 +54,26 @@ export async function enrichSpeciesFromSources(record, { now = new Date() } = {}
   const needsIucn = !record?.iucn_global_status;
   if (!needsGbifReference && !needsIucn) return { patch: {}, notes };
 
-  const match = await matchGbifName(name);
-  if (!isUsableGbifMatch(match)) {
-    throw new Error(
-      match?.matchType === 'HIGHERRANK'
-        ? `GBIF solo reconoce «${match.canonicalName || ''}», no la especie`
-        : 'sin coincidencia en GBIF',
-    );
-  }
+  const taxon = await resolveGbifTaxon(record);
 
   const patch = {};
   let nextReferences = references;
+  // Citations name the taxon as the source does, noting this site's name when the
+  // two authorities disagree about the genus.
+  const siteName = name;
 
   if (needsGbifReference) {
-    nextReferences = [...nextReferences, buildGbifReference(match, { now })];
+    nextReferences = [...nextReferences, buildGbifReference(taxon, { now, siteName })];
   }
 
   if (needsIucn) {
-    const assessment = await fetchIucnAssessment(match.usageKey);
+    const assessment = await fetchIucnAssessment(taxon.key);
     if (assessment) {
       patch.iucn_global_status = assessment.code;
       if (!hasIucnReference(nextReferences)) {
         nextReferences = [
           ...nextReferences,
-          buildIucnReference(assessment, { now, searchName: match.canonicalName }),
+          buildIucnReference(assessment, { now, searchName: taxon.canonicalName, siteName }),
         ];
       }
     } else {

@@ -7,6 +7,8 @@
  * The citation credits IUCN and records that it was consulted through GBIF.
  */
 
+import { equivalenceNote } from '@/lib/gbif';
+
 const IUCN_CATEGORY_ENDPOINT = (usageKey) => `https://api.gbif.org/v1/species/${usageKey}/iucnRedListCategory`;
 const IUCN_SEARCH = 'https://www.iucnredlist.org/search?searchType=species&query=';
 
@@ -53,12 +55,12 @@ export function hasIucnReference(references) {
  * `searchName` should be the canonical binomial: the Red List search does not
  * match the authorship that IUCN's own `scientificName` carries.
  */
-export function buildIucnReference(assessment, { now = new Date(), searchName } = {}) {
+export function buildIucnReference(assessment, { now = new Date(), searchName, siteName } = {}) {
   const name = assessment.scientificName;
   const accessed = now.toLocaleDateString('es-CL', { day: 'numeric', month: 'long', year: 'numeric' });
   const label = iucnLabel(assessment.code);
   return {
-    citation: `IUCN (${now.getFullYear()}). ${name}: ${label} (${assessment.code}). `
+    citation: `IUCN (${now.getFullYear()}). ${name}${equivalenceNote(name, siteName)}: ${label} (${assessment.code}). `
       + `*The IUCN Red List of Threatened Species*, taxón ${assessment.iucnTaxonID}. `
       + `Consultado el ${accessed} vía GBIF.`,
     url: iucnSearchUrl(searchName || name),

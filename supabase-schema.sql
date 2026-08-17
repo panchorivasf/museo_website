@@ -30,6 +30,15 @@ create table if not exists species (
 -- Migration for databases created before the references column existed
 alter table species add column if not exists "references" jsonb not null default '[]';
 
+-- Link to the GBIF taxon this species corresponds to, for the case where the
+-- authority used here (e.g. Birds of the World) places it in a different genus
+-- than GBIF does. scientific_name always keeps this museum's chosen name; when
+-- gbif_usage_key is set, GBIF and IUCN are queried by that key instead of by name.
+-- gbif_scientific_name records the accepted name under that key, so the equivalence
+-- is visible in the admin and stated in the citations.
+alter table species add column if not exists gbif_usage_key bigint;
+alter table species add column if not exists gbif_scientific_name text;
+
 -- Global IUCN Red List category (EX/EW/CR/EN/VU/NT/LC/DD), fetched in the admin.
 -- Kept separate from conservation_status, which records the classification used
 -- locally: a species can be Least Concern globally and threatened nationally.
