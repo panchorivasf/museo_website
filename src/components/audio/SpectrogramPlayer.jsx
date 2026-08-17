@@ -20,7 +20,6 @@ function buildSpectrogramImage(audioBuffer, canvasWidth, canvasHeight, freqMinHz
     freqMinHz,
     freqMaxHz,
     fftSize: fftSizeOverride,
-    minFftSize: 1024,
   });
   // Return visible freq range so labels can be drawn correctly
   return { offscreen: canvas, visMinHz: minHz, visMaxHz: maxHz };
@@ -55,7 +54,9 @@ export default function SpectrogramPlayer({ audioUrl, altText, spectrogramMin, s
   const gainNodeRef = useRef(null);
   const audioBufferRef = useRef(null);
   const animFrameRef = useRef(null);
-  const startTimeRef = useRef(0);
+  // null while stopped — see MiniSpectrogram: a new AudioContext starts at
+  // currentTime 0, so 0 cannot double as "not playing".
+  const startTimeRef = useRef(null);
   const pauseOffsetRef = useRef(0);
   const playbackRateRef = useRef(1);
   const isPlayingRef = useRef(false);
@@ -139,13 +140,25 @@ export default function SpectrogramPlayer({ audioUrl, altText, spectrogramMin, s
       const magnitude = Math.pow(10, Math.floor(Math.log10(rawStep)));
       const step = Math.ceil(rawStep / magnitude) * magnitude;
       const firstLabel = Math.ceil(visMin / step) * step;
-      ctx.font = `${Math.round(H * 0.055)}px monospace`;
+      const fontSize = Math.round(H * 0.055);
+      ctx.font = `${fontSize}px monospace`;
+
+      const labels = [];
+      let widest = 0;
       for (let f = firstLabel; f < visMax; f += step) {
-        const y = H * (1 - (f - visMin) / rangeHz);
-        ctx.fillStyle = 'rgba(0,0,0,0.4)';
-        ctx.fillRect(4, y - 12, 48, 13);
+        const text = `${(f / 1000).toFixed(f % 1000 === 0 ? 0 : 1)} kHz`;
+        widest = Math.max(widest, ctx.measureText(text).width);
+        labels.push({ text, y: H * (1 - (f - visMin) / rangeHz) });
+      }
+
+      if (labels.length) {
+        // One full-height gutter behind the whole axis instead of a box per label.
+        // Sized from the widest label so it holds at any canvas size or zoom.
+        const padX = Math.max(4, fontSize * 0.4);
+        ctx.fillStyle = 'rgba(0,0,0,0.28)';
+        ctx.fillRect(0, 0, widest + padX * 2, H);
         ctx.fillStyle = 'rgba(255,255,255,0.7)';
-        ctx.fillText(`${(f / 1000).toFixed(f % 1000 === 0 ? 0 : 1)} kHz`, 5, y - 2);
+        labels.forEach(({ text, y }) => ctx.fillText(text, padX, y - 2));
       }
     }
 
@@ -160,7 +173,7 @@ export default function SpectrogramPlayer({ audioUrl, altText, spectrogramMin, s
 
   const drawFrame = useCallback(() => {
     const dur = audioBufferRef.current?.duration || 0;
-    if (dur > 0 && audioContextRef.current && startTimeRef.current > 0) {
+    if (dur > 0 && audioContextRef.current && startTimeRef.current !== null) {
       const elapsed = (audioContextRef.current.currentTime - startTimeRef.current) * playbackRateRef.current;
       const t = Math.min(pauseOffsetRef.current + elapsed, dur);
       setCurrentTime(t);
@@ -252,6 +265,7 @@ export default function SpectrogramPlayer({ audioUrl, altText, spectrogramMin, s
       sourceRef.current = null;
     }
     cancelAnimationFrame(animFrameRef.current);
+    startTimeRef.current = null;
     if (resetOffset) {
       pauseOffsetRef.current = 0;
       setCurrentTime(0);
@@ -286,7 +300,7 @@ export default function SpectrogramPlayer({ audioUrl, altText, spectrogramMin, s
     source.onended = () => {
       cancelAnimationFrame(animFrameRef.current);
       pauseOffsetRef.current = 0;
-      startTimeRef.current = 0;
+      startTimeRef.current = null;
       setCurrentTime(0);
       setIsPlaying(false);
       drawStatic();
@@ -298,7 +312,7 @@ export default function SpectrogramPlayer({ audioUrl, altText, spectrogramMin, s
   }, [loadAudio, playbackRate, volume, muted, stopSource, drawFrame, drawStatic]);
 
   const pause = useCallback(() => {
-    if (audioContextRef.current && startTimeRef.current > 0) {
+    if (audioContextRef.current && startTimeRef.current !== null) {
       const elapsed = (audioContextRef.current.currentTime - startTimeRef.current) * playbackRateRef.current;
       pauseOffsetRef.current = Math.min(pauseOffsetRef.current + elapsed, audioBufferRef.current?.duration || 0);
     }

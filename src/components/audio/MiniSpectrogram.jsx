@@ -26,7 +26,6 @@ function buildOffscreen(audioBuffer, canvasW, canvasH, freqMinHz, freqMaxHz, fft
     freqMinHz,
     freqMaxHz,
     fftSize: fftSizeOverride,
-    minFftSize: 512,
   });
   return canvas;
 }
@@ -39,7 +38,10 @@ export default function MiniSpectrogram({ audioUrl, spectrogramMin, spectrogramM
   const sourceRef = useRef(null);
   const audioBufferRef = useRef(null);
   const animRef = useRef(null);
-  const startTimeRef = useRef(0);
+  // null while stopped. Not 0: a freshly created AudioContext starts at
+  // currentTime 0, so a truthiness check here would treat the first frames of
+  // playback as "not playing" and freeze the playhead.
+  const startTimeRef = useRef(null);
   const pauseOffsetRef = useRef(0);
   // Stable ref to the pause function — avoids circular useCallback deps
   const pauseFnRef = useRef(null);
@@ -99,12 +101,13 @@ export default function MiniSpectrogram({ audioUrl, spectrogramMin, spectrogramM
       sourceRef.current = null;
     }
     cancelAnimationFrame(animRef.current);
+    startTimeRef.current = null;
     if (resetOffset) pauseOffsetRef.current = 0;
   }, []);
 
   // pause defined before play to avoid temporal dead zone
   const pause = useCallback(() => {
-    if (audioCtxRef.current && startTimeRef.current > 0) {
+    if (audioCtxRef.current && startTimeRef.current !== null) {
       pauseOffsetRef.current = Math.min(
         pauseOffsetRef.current + (audioCtxRef.current.currentTime - startTimeRef.current),
         audioBufferRef.current?.duration || 0,
@@ -120,7 +123,7 @@ export default function MiniSpectrogram({ audioUrl, spectrogramMin, spectrogramM
 
   const drawFrame = useCallback(() => {
     const dur = audioBufferRef.current?.duration || 0;
-    if (dur > 0 && audioCtxRef.current && startTimeRef.current > 0) {
+    if (dur > 0 && audioCtxRef.current && startTimeRef.current !== null) {
       const elapsed = audioCtxRef.current.currentTime - startTimeRef.current;
       renderAt(Math.min(pauseOffsetRef.current + elapsed, dur));
     }
@@ -166,7 +169,7 @@ export default function MiniSpectrogram({ audioUrl, spectrogramMin, spectrogramM
     source.onended = () => {
       cancelAnimationFrame(animRef.current);
       pauseOffsetRef.current = 0;
-      startTimeRef.current = 0;
+      startTimeRef.current = null;
       setPlaying(false);
       _stopActive = null;
       renderAt(0);

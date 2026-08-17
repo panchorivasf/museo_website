@@ -64,6 +64,18 @@ export function valueToColor(v) {
   return [Math.round((r + m) * 255), Math.round((g + m) * 255), Math.round((b + m) * 255)];
 }
 
+/**
+ * The FFT size to use when a species has not pinned one.
+ *
+ * Resolved against a fixed reference height rather than the height of whatever
+ * widget is drawing, so one species looks the same everywhere: the 72px-tall map
+ * popup, the full player on the species page and the baked image all get the same
+ * frequency resolution. Sizing it per widget made the map noticeably coarser.
+ */
+export function resolveFftSize(sampleRate, freqMinHz, freqMaxHz, fftSize = null) {
+  return fftSize || pickFftSize(sampleRate, freqMinHz, freqMaxHz, PRERENDER_HEIGHT, 1024);
+}
+
 /** Smallest FFT size that gives at least one bin per pixel row of the visible band. */
 export function pickFftSize(sampleRate, freqMinHz, freqMaxHz, canvasH, minSize = 1024) {
   const nyquist = sampleRate / 2;
@@ -113,11 +125,9 @@ export function renderSpectrogram(audioBuffer, {
   freqMinHz = null,
   freqMaxHz = null,
   fftSize: fftSizeOverride = null,
-  minFftSize = 1024,
 }) {
   const nyquist = audioBuffer.sampleRate / 2;
-  const fftSize = fftSizeOverride
-    || pickFftSize(audioBuffer.sampleRate, freqMinHz, freqMaxHz, height, minFftSize);
+  const fftSize = resolveFftSize(audioBuffer.sampleRate, freqMinHz, freqMaxHz, fftSizeOverride);
   const { frames, numBins } = computeFrames(audioBuffer, fftSize);
 
   const minBin = freqMinHz ? Math.max(0, Math.floor((freqMinHz / nyquist) * numBins)) : 0;
@@ -183,8 +193,7 @@ export const PRERENDER_MAX_WIDTH = 12000;
  * whatever width their canvas needs.
  */
 export function buildPrerenderCanvas(audioBuffer, { freqMinHz = null, freqMaxHz = null, fftSize = null } = {}) {
-  const resolvedFftSize = fftSize
-    || pickFftSize(audioBuffer.sampleRate, freqMinHz, freqMaxHz, PRERENDER_HEIGHT);
+  const resolvedFftSize = resolveFftSize(audioBuffer.sampleRate, freqMinHz, freqMaxHz, fftSize);
   const frameRate = audioBuffer.sampleRate / Math.floor(resolvedFftSize / 4);
   const width = Math.max(
     1,
