@@ -167,3 +167,45 @@ create policy "Auth delete concepts"
 
 grant select on table concepts to anon;
 grant select, insert, update, delete on table concepts to authenticated;
+
+-- Publicaciones (peer-reviewed articles and other outputs by the museum's team).
+-- Flat records rather than block-based like blog_posts/concepts: everything a
+-- visitor needs -- title, abstract, figure, and the links out -- fits on one card,
+-- so there is no per-publication detail page and therefore no slug column.
+create table if not exists publications (
+  id uuid primary key default gen_random_uuid(),
+  title text not null,
+  authors text,
+  -- Journal / conference / publisher, shown next to the year.
+  venue text,
+  year integer,
+  abstract text,
+  -- Representative figure. figure_caption doubles as the img alt text.
+  figure_url text,
+  figure_caption text,
+  -- Either or both may be set; the card renders one button per populated link.
+  article_url text,
+  pdf_url text,
+  published boolean not null default false,
+  created_at timestamptz default now()
+);
+
+alter table publications enable row level security;
+
+create policy "Public read published publications"
+  on publications for select using (published = true);
+
+create policy "Auth read all publications"
+  on publications for select using (auth.role() = 'authenticated');
+
+create policy "Auth insert publications"
+  on publications for insert with check (auth.role() = 'authenticated');
+
+create policy "Auth update publications"
+  on publications for update using (auth.role() = 'authenticated');
+
+create policy "Auth delete publications"
+  on publications for delete using (auth.role() = 'authenticated');
+
+grant select on table publications to anon;
+grant select, insert, update, delete on table publications to authenticated;

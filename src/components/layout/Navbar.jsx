@@ -11,6 +11,7 @@ const navLinks = [
   { path: '/mapa', label: 'Mapa' },
   { path: '/blog', label: 'Blog' },
   { path: '/conceptos', label: 'Conceptos' },
+  { path: '/publicaciones', label: 'Publicaciones' },
   { path: '/nosotros', label: 'Nosotros' },
 ];
 

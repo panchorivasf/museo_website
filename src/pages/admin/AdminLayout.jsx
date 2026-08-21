@@ -1,12 +1,13 @@
 import React from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
-import { AudioWaveform, ListMusic, MapPin, ArrowLeft, Newspaper, BookOpen } from 'lucide-react';
+import { AudioWaveform, ListMusic, MapPin, ArrowLeft, Newspaper, BookOpen, FileText } from 'lucide-react';
 
 const adminLinks = [
   { path: '/admin', label: 'Especies', icon: ListMusic },
   { path: '/admin/grabaciones', label: 'Grabaciones del Mapa', icon: MapPin },
   { path: '/admin/blog', label: 'Blog', icon: Newspaper },
   { path: '/admin/conceptos', label: 'Conceptos', icon: BookOpen },
+  { path: '/admin/publicaciones', label: 'Publicaciones', icon: FileText },
 ];
 
 export default function AdminLayout() {
