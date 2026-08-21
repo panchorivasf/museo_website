@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { supabase } from '@/api/supabaseClient';
 import { Button } from '@/components/ui/button';
-import { ExternalLink, FileDown, FileText } from 'lucide-react';
+import { ExternalLink, FileDown } from 'lucide-react';
 
 /**
  * Publication cards. Unlike Blog/Conceptos these are flat records shown in full
@@ -14,62 +14,59 @@ function PublicationCard({ item }) {
 
   return (
     <article className="rounded-xl overflow-hidden bg-card border border-border shadow-sm">
-      <div className="sm:flex">
-        <div className="sm:w-64 sm:shrink-0 bg-muted">
-          {item.figure_url ? (
+      <div className="p-5 sm:p-6">
+        <h2 className="font-heading font-semibold text-lg text-primary leading-tight">
+          {item.title}
+        </h2>
+
+        {item.authors && (
+          <p className="text-sm text-muted-foreground mt-1.5">{item.authors}</p>
+        )}
+        {meta && (
+          <p className="text-xs font-mono text-muted-foreground/70 mt-1">{meta}</p>
+        )}
+
+        {item.figure_url && (
+          <figure className="mt-5">
+            {/* object-contain, not cover: these are scientific figures, so cropping
+                them to fill a fixed box would cut off panels, axes or legends. */}
             <img
               src={item.figure_url}
               alt={item.figure_caption || item.title}
-              className="w-full h-48 sm:h-full object-cover"
+              className="w-full max-h-[26rem] object-contain rounded-lg bg-muted"
             />
-          ) : (
-            <div className="w-full h-48 sm:h-full min-h-[12rem] flex items-center justify-center text-muted-foreground">
-              <FileText className="w-10 h-10" />
-            </div>
-          )}
-        </div>
+            {item.figure_caption && (
+              <figcaption className="text-xs text-muted-foreground mt-2 italic">
+                {item.figure_caption}
+              </figcaption>
+            )}
+          </figure>
+        )}
 
-        <div className="p-5 sm:p-6 flex-1 min-w-0">
-          <h2 className="font-heading font-semibold text-lg text-primary leading-tight">
-            {item.title}
-          </h2>
+        {item.abstract && (
+          <p className="text-sm text-foreground/80 mt-5 whitespace-pre-line">
+            {item.abstract}
+          </p>
+        )}
 
-          {item.authors && (
-            <p className="text-sm text-muted-foreground mt-1.5">{item.authors}</p>
-          )}
-          {meta && (
-            <p className="text-xs font-mono text-muted-foreground/70 mt-1">{meta}</p>
-          )}
-
-          {item.abstract && (
-            <p className="text-sm text-foreground/80 mt-3 whitespace-pre-line">
-              {item.abstract}
-            </p>
-          )}
-
-          {item.figure_caption && item.figure_url && (
-            <p className="text-xs text-muted-foreground mt-3 italic">{item.figure_caption}</p>
-          )}
-
-          {(item.article_url || item.pdf_url) && (
-            <div className="flex flex-wrap gap-2 mt-5">
-              {item.article_url && (
-                <Button asChild size="sm" className="bg-secondary hover:bg-secondary/90 gap-1.5">
-                  <a href={item.article_url} target="_blank" rel="noopener noreferrer">
-                    <ExternalLink className="w-3.5 h-3.5" /> Ver artículo
-                  </a>
-                </Button>
-              )}
-              {item.pdf_url && (
-                <Button asChild size="sm" variant="outline" className="gap-1.5">
-                  <a href={item.pdf_url} target="_blank" rel="noopener noreferrer">
-                    <FileDown className="w-3.5 h-3.5" /> Descargar PDF
-                  </a>
-                </Button>
-              )}
-            </div>
-          )}
-        </div>
+        {(item.article_url || item.pdf_url) && (
+          <div className="flex flex-wrap gap-2 mt-5">
+            {item.article_url && (
+              <Button asChild size="sm" className="bg-secondary hover:bg-secondary/90 gap-1.5">
+                <a href={item.article_url} target="_blank" rel="noopener noreferrer">
+                  <ExternalLink className="w-3.5 h-3.5" /> Ver artículo
+                </a>
+              </Button>
+            )}
+            {item.pdf_url && (
+              <Button asChild size="sm" variant="outline" className="gap-1.5">
+                <a href={item.pdf_url} target="_blank" rel="noopener noreferrer">
+                  <FileDown className="w-3.5 h-3.5" /> Descargar PDF
+                </a>
+              </Button>
+            )}
+          </div>
+        )}
       </div>
     </article>
   );
