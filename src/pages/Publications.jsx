@@ -115,24 +115,49 @@ function PublicationCard({ item }) {
   );
 }
 
-/** "Ver como lista": title, authors and year, and deliberately nothing else. */
+/**
+ * "Ver como lista": title, authors and year, plus the links out — the abstract
+ * and figure are what this view deliberately leaves out, not the way to reach
+ * the paper.
+ */
 function PublicationRow({ item }) {
   const meta = [item.authors, item.year].filter(Boolean).join(' · ');
 
   return (
-    <li className="px-4 sm:px-5 py-3">
-      <h2
-        className={`font-heading font-medium text-primary leading-snug ${TITLE_HTML_CLASS}`}
-        dangerouslySetInnerHTML={{ __html: stripPastedColors(item.title) }}
-      />
-      {meta && <p className="text-sm text-muted-foreground mt-0.5">{meta}</p>}
+    <li className="px-4 sm:px-5 py-3 flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
+      <div className="min-w-0 flex-1">
+        <h2
+          className={`font-heading font-medium text-primary leading-snug ${TITLE_HTML_CLASS}`}
+          dangerouslySetInnerHTML={{ __html: stripPastedColors(item.title) }}
+        />
+        {meta && <p className="text-sm text-muted-foreground mt-0.5">{meta}</p>}
+      </div>
+
+      {(item.article_url || item.pdf_url) && (
+        <div className="flex items-center gap-1.5 shrink-0">
+          {item.article_url && (
+            <Button asChild size="sm" className="h-8 bg-secondary hover:bg-secondary/90 gap-1.5 text-xs">
+              <a href={item.article_url} target="_blank" rel="noopener noreferrer">
+                <ExternalLink className="w-3.5 h-3.5" /> Ver artículo
+              </a>
+            </Button>
+          )}
+          {item.pdf_url && (
+            <Button asChild size="sm" variant="outline" className="h-8 gap-1.5 text-xs">
+              <a href={item.pdf_url} target="_blank" rel="noopener noreferrer">
+                <FileDown className="w-3.5 h-3.5" /> PDF
+              </a>
+            </Button>
+          )}
+        </div>
+      )}
     </li>
   );
 }
 
 export default function Publications() {
   const [sort, setSort] = useState('default');
-  const [view, setView] = useState('detail');
+  const [view, setView] = useState('list');
 
   const { data: items = [], isLoading } = useQuery({
     queryKey: ['publications'],
