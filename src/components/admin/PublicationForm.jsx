@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import ReactQuill from 'react-quill';
+import ReactQuill, { Quill } from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import { supabase } from '@/api/supabaseClient';
 import { Button } from '@/components/ui/button';
@@ -10,16 +10,9 @@ import { Switch } from '@/components/ui/switch';
 import { X, Upload, Loader2, Trash2 } from 'lucide-react';
 import { hasRichText, richTextToNull } from '@/lib/richText';
 
-// Titles carry scientific names, so they need italics. Enter is swallowed
-// because the card renders the title as a single-line heading.
-const titleModules = {
-  toolbar: [
-    ['italic'],
-    [{ script: 'super' }, { script: 'sub' }],
-    ['clean'],
-  ],
-  keyboard: { bindings: { enter: { key: 13, handler: () => false } } },
-};
+// The title toolbar is written out by hand (rather than declared as an array)
+// because it carries two buttons Quill has no format for: the case converters.
+const TITLE_TOOLBAR_ID = 'publication-title-toolbar';
 
 // Quill keeps every format it knows about when text is pasted, whatever the
 // toolbar offers -- which is how a paste from Word, Docs or a PDF arrives
@@ -29,6 +22,123 @@ const titleModules = {
 const titleFormats = ['italic', 'script'];
 const abstractFormats = ['bold', 'italic', 'underline', 'script', 'list', 'link'];
 const captionFormats = ['bold', 'italic', 'script', 'link'];
+
+// --- Case conversion for the title -------------------------------------------
+// Journals hand out titles in ALL CAPS; these turn one into something readable
+// without retyping it (and so without losing the italics on the species names).
+
+// Kept lowercase by the title-case pass unless they open or close the title.
+const MINOR_WORDS = new Set([
+  'a', 'an', 'and', 'as', 'at', 'but', 'by', 'for', 'from', 'in', 'into', 'nor',
+  'of', 'on', 'or', 'over', 'per', 'the', 'to', 'versus', 'via', 'vs', 'with',
+  'al', 'con', 'de', 'del', 'e', 'el', 'en', 'entre', 'la', 'las', 'los', 'o',
+  'para', 'por', 'que', 'se', 'sin', 'sobre', 'su', 'un', 'una', 'y',
+]);
+
+const LETTER_RE = /\p{L}/u;
+const SENTENCE_END_RE = /[.!?¡¿]/;
+const WORD_RE = /[\p{L}\p{N}][\p{L}\p{N}'’-]*/gu;
+const CLAUSE_END_RE = /[.!?:;¡¿]/;
+const SKIPPABLE_RE = /[\s"'‘’“”([{—–-]/;
+
+// Recases character by character so the result is always the same length as the
+// input, which is what lets the rewrite below keep every italic run aligned.
+// (A handful of characters -- ss-ligature, dotted I -- grow when recased; those
+// are left as they were rather than shifting everything after them.)
+function mapCase(text, shouldUpper) {
+  let out = '';
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    const recased = shouldUpper(i) ? ch.toUpperCase() : ch.toLowerCase();
+    out += recased.length === 1 ? recased : ch;
+  }
+  return out;
+}
+
+/** "ACOUSTIC MONITORING. PART TWO" -> "Acoustic monitoring. Part two" */
+function toSentenceCase(text) {
+  const upper = new Set();
+  let atSentenceStart = true;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (atSentenceStart && LETTER_RE.test(ch)) {
+      upper.add(i);
+      atSentenceStart = false;
+    } else if (SENTENCE_END_RE.test(ch)) {
+      atSentenceStart = true;
+    }
+  }
+  return mapCase(text, i => upper.has(i));
+}
+
+// True when the word starting at `index` is the first one after punctuation
+// that ends a clause, skipping any brackets or quotes in between.
+function opensClause(text, index) {
+  for (let i = index - 1; i >= 0; i--) {
+    const ch = text[i];
+    if (CLAUSE_END_RE.test(ch)) return true;
+    if (!SKIPPABLE_RE.test(ch)) return false;
+  }
+  return false;
+}
+
+/** "ACOUSTIC MONITORING OF BIRDS" -> "Acoustic Monitoring of Birds" */
+function toTitleCase(text) {
+  const words = [];
+  WORD_RE.lastIndex = 0;
+  let match;
+  while ((match = WORD_RE.exec(text)) !== null) {
+    words.push({ index: match.index, word: match[0] });
+  }
+
+  const upper = new Set();
+  words.forEach(({ index, word }, i) => {
+    const isEdge = i === 0 || i === words.length - 1;
+    // A minor word still takes a capital when it opens a subtitle or a new
+    // sentence -- "Part Two: The Method", not "Part Two: the Method".
+    if (isEdge || opensClause(text, index) || !MINOR_WORDS.has(word.toLowerCase())) {
+      upper.add(index);
+    }
+  });
+  return mapCase(text, i => upper.has(i));
+}
+
+/**
+ * Applies `transform` to the selection, or to the whole field when nothing is
+ * selected. The text is rewritten one Quill op at a time instead of being
+ * replaced wholesale, because deleting the run and re-inserting plain text
+ * would strip the italics the case change is supposed to preserve.
+ */
+function recase(editor, transform) {
+  const selection = editor.getSelection();
+  const range = selection && selection.length > 0
+    ? selection
+    // getLength() counts the trailing newline that ends the block; recasing it
+    // is meaningless and rewriting it upsets the block, so it stays out.
+    : { index: 0, length: Math.max(editor.getLength() - 1, 0) };
+  if (range.length === 0) return;
+
+  const contents = editor.getContents(range.index, range.length);
+  // Embeds have no text to recase and would break the offset arithmetic. The
+  // title editor cannot contain any, but bail out rather than corrupt the field.
+  if (contents.ops.some(op => typeof op.insert !== 'string')) return;
+
+  const text = contents.ops.map(op => op.insert).join('');
+  const next = transform(text);
+  if (next === text) return;
+
+  const Delta = Quill.import('delta');
+  const change = new Delta().retain(range.index);
+  let offset = 0;
+  contents.ops.forEach(op => {
+    const length = op.insert.length;
+    change.delete(length).insert(next.slice(offset, offset + length), op.attributes);
+    offset += length;
+  });
+
+  editor.updateContents(change, 'user');
+  editor.setSelection(range.index, range.length, 'silent');
+}
 
 // Superscript/subscript are here for the notation abstracts actually use
 // (kHz ranges, m2, CO2, exponents); italics carry the scientific names.
@@ -84,11 +194,31 @@ export default function PublicationForm({ item, onClose }) {
       Object.keys(EMPTY).map(k => [k, item[k] ?? EMPTY[k]])
     );
   });
+  const titleRef = useRef(null);
   const [uploadingFigure, setUploadingFigure] = useState(false);
   const [uploadingPdf, setUploadingPdf] = useState(false);
   const [pdfName, setPdfName] = useState('');
 
   const update = (key, value) => setForm(prev => ({ ...prev, [key]: value }));
+
+  const applyCase = useCallback((transform) => {
+    const editor = titleRef.current?.getEditor();
+    if (editor) recase(editor, transform);
+  }, []);
+
+  // Memoized because ReactQuill rebuilds the editor whenever `modules` changes
+  // identity, which would tear down the toolbar on every keystroke.
+  const titleModules = useMemo(() => ({
+    toolbar: {
+      container: `#${TITLE_TOOLBAR_ID}`,
+      handlers: {
+        sentenceCase: () => applyCase(toSentenceCase),
+        titleCase: () => applyCase(toTitleCase),
+      },
+    },
+    // The card renders the title as a single-line heading, so Enter does nothing.
+    keyboard: { bindings: { enter: { key: 13, handler: () => false } } },
+  }), [applyCase]);
 
   const handleFigureUpload = async (e) => {
     const file = e.target.files?.[0];
@@ -188,7 +318,35 @@ export default function PublicationForm({ item, onClose }) {
         <div className="space-y-1.5">
           <Label>Título *</Label>
           <div className="bg-background">
+            {/* Hand-written toolbar: Quill binds each button to the handler
+                named by its ql-* class. type="button" on every one of them,
+                or clicking a format would submit the form. */}
+            <div id={TITLE_TOOLBAR_ID}>
+              <span className="ql-formats">
+                <button type="button" className="ql-italic" aria-label="Cursiva" />
+                <button type="button" className="ql-script" value="super" aria-label="Superíndice" />
+                <button type="button" className="ql-script" value="sub" aria-label="Subíndice" />
+                <button type="button" className="ql-clean" aria-label="Quitar formato" />
+              </span>
+              <span className="ql-formats">
+                <button
+                  type="button"
+                  className="ql-sentenceCase !w-auto !px-2 text-xs font-medium"
+                  title="Formato oración: solo la primera letra en mayúscula"
+                >
+                  Oración
+                </button>
+                <button
+                  type="button"
+                  className="ql-titleCase !w-auto !px-2 text-xs font-medium"
+                  title="Mayúsculas Iniciales: una mayúscula por palabra"
+                >
+                  Título
+                </button>
+              </span>
+            </div>
             <ReactQuill
+              ref={titleRef}
               theme="snow"
               modules={titleModules}
               formats={titleFormats}
@@ -196,6 +354,9 @@ export default function PublicationForm({ item, onClose }) {
               onChange={html => update('title', html)}
             />
           </div>
+          <p className="text-xs text-muted-foreground">
+            Los botones de formato convierten el texto seleccionado, o el título completo si no hay selección.
+          </p>
         </div>
 
         <div className="space-y-1.5">
