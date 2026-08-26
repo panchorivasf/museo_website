@@ -7,7 +7,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import { ExternalLink, FileDown, ArrowUpDown } from 'lucide-react';
-import { hasRichText, richTextToPlain } from '@/lib/richText';
+import { hasRichText, richTextToPlain, stripPastedColors } from '@/lib/richText';
 
 // 'default' is whatever order the admin set (custom drag order, or by year when
 // no row carries a sort_order); the rest let a visitor override it for their own
@@ -53,7 +53,7 @@ function PublicationCard({ item }) {
       <div className="p-5 sm:p-6">
         <h2
           className="font-heading font-semibold text-lg text-primary leading-tight [&_p]:m-0 [&_sub]:align-sub [&_sub]:text-[0.8em] [&_sup]:align-super [&_sup]:text-[0.8em]"
-          dangerouslySetInnerHTML={{ __html: item.title }}
+          dangerouslySetInnerHTML={{ __html: stripPastedColors(item.title) }}
         />
 
         {item.authors && (
@@ -75,7 +75,7 @@ function PublicationCard({ item }) {
             {hasRichText(item.figure_caption) && (
               <figcaption
                 className="text-xs text-muted-foreground mt-2 [&_p]:m-0 [&_a]:text-secondary [&_a]:underline [&_sub]:align-sub [&_sub]:text-[0.8em] [&_sup]:align-super [&_sup]:text-[0.8em]"
-                dangerouslySetInnerHTML={{ __html: item.figure_caption }}
+                dangerouslySetInnerHTML={{ __html: stripPastedColors(item.figure_caption) }}
               />
             )}
           </figure>
@@ -84,7 +84,7 @@ function PublicationCard({ item }) {
         {hasRichText(item.abstract) && (
           <div
             className="text-sm text-foreground/80 mt-5 leading-relaxed [&_p]:mb-3 [&_p:last-child]:mb-0 [&_a]:text-secondary [&_a]:underline [&_strong]:font-semibold [&_ul]:list-disc [&_ul]:pl-6 [&_ul]:mb-3 [&_ol]:list-decimal [&_ol]:pl-6 [&_ol]:mb-3 [&_sub]:align-sub [&_sub]:text-[0.8em] [&_sup]:align-super [&_sup]:text-[0.8em]"
-            dangerouslySetInnerHTML={{ __html: item.abstract }}
+            dangerouslySetInnerHTML={{ __html: stripPastedColors(item.abstract) }}
           />
         )}
 

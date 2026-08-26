@@ -21,6 +21,15 @@ const titleModules = {
   keyboard: { bindings: { enter: { key: 13, handler: () => false } } },
 };
 
+// Quill keeps every format it knows about when text is pasted, whatever the
+// toolbar offers -- which is how a paste from Word, Docs or a PDF arrives
+// wearing a white background-color on every span. Whitelisting the formats each
+// editor actually uses makes Quill drop the rest on the way in, so a normal
+// paste keeps its italics and loses the highlight.
+const titleFormats = ['italic', 'script'];
+const abstractFormats = ['bold', 'italic', 'underline', 'script', 'list', 'link'];
+const captionFormats = ['bold', 'italic', 'script', 'link'];
+
 // Superscript/subscript are here for the notation abstracts actually use
 // (kHz ranges, m2, CO2, exponents); italics carry the scientific names.
 const abstractModules = {
@@ -182,6 +191,7 @@ export default function PublicationForm({ item, onClose }) {
             <ReactQuill
               theme="snow"
               modules={titleModules}
+              formats={titleFormats}
               value={form.title}
               onChange={html => update('title', html)}
             />
@@ -223,6 +233,7 @@ export default function PublicationForm({ item, onClose }) {
             <ReactQuill
               theme="snow"
               modules={abstractModules}
+              formats={abstractFormats}
               value={form.abstract}
               onChange={html => update('abstract', html)}
             />
@@ -260,6 +271,7 @@ export default function PublicationForm({ item, onClose }) {
             <ReactQuill
               theme="snow"
               modules={captionModules}
+              formats={captionFormats}
               value={form.figure_caption}
               onChange={html => update('figure_caption', html)}
             />
