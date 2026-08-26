@@ -1,12 +1,36 @@
 import React, { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import ReactQuill from 'react-quill';
+import 'react-quill/dist/quill.snow.css';
 import { supabase } from '@/api/supabaseClient';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { X, Upload, Loader2, Trash2 } from 'lucide-react';
+import { richTextToNull } from '@/lib/richText';
+
+// Superscript/subscript are here for the notation abstracts actually use
+// (kHz ranges, m2, CO2, exponents); italics carry the scientific names.
+const abstractModules = {
+  toolbar: [
+    ['bold', 'italic', 'underline'],
+    [{ script: 'super' }, { script: 'sub' }],
+    [{ list: 'ordered' }, { list: 'bullet' }],
+    ['link'],
+    ['clean'],
+  ],
+};
+
+// A caption is a single short line, so it gets inline marks only -- no lists.
+const captionModules = {
+  toolbar: [
+    ['bold', 'italic'],
+    [{ script: 'super' }, { script: 'sub' }],
+    ['link'],
+    ['clean'],
+  ],
+};
 
 async function uploadFile(file) {
   const ext = file.name.split('.').pop();
@@ -83,9 +107,9 @@ export default function PublicationForm({ item, onClose }) {
         // truthiness checks (which decide whether to render each block) hold.
         authors: form.authors || null,
         venue: form.venue || null,
-        abstract: form.abstract || null,
+        abstract: richTextToNull(form.abstract),
         figure_url: form.figure_url || null,
-        figure_caption: form.figure_caption || null,
+        figure_caption: richTextToNull(form.figure_caption),
         article_url: form.article_url || null,
         pdf_url: form.pdf_url || null,
         year: form.year === '' || form.year == null ? null : parseInt(form.year, 10),
@@ -161,12 +185,14 @@ export default function PublicationForm({ item, onClose }) {
 
         <div className="space-y-1.5">
           <Label>Resumen (abstract)</Label>
-          <Textarea
-            value={form.abstract}
-            onChange={e => update('abstract', e.target.value)}
-            rows={8}
-            placeholder="Resumen del artículo."
-          />
+          <div className="bg-background">
+            <ReactQuill
+              theme="snow"
+              modules={abstractModules}
+              value={form.abstract}
+              onChange={html => update('abstract', html)}
+            />
+          </div>
         </div>
 
         {/* Figure */}
@@ -196,11 +222,14 @@ export default function PublicationForm({ item, onClose }) {
 
         <div className="space-y-1.5">
           <Label>Leyenda de la figura</Label>
-          <Input
-            value={form.figure_caption}
-            onChange={e => update('figure_caption', e.target.value)}
-            placeholder="ej: Figura 1. Espectrograma del canto territorial."
-          />
+          <div className="bg-background">
+            <ReactQuill
+              theme="snow"
+              modules={captionModules}
+              value={form.figure_caption}
+              onChange={html => update('figure_caption', html)}
+            />
+          </div>
         </div>
 
         <div className="space-y-1.5">

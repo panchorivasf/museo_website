@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { supabase } from '@/api/supabaseClient';
 import { Button } from '@/components/ui/button';
 import { ExternalLink, FileDown } from 'lucide-react';
+import { hasRichText, richTextToPlain } from '@/lib/richText';
 
 /**
  * Publication cards. Unlike Blog/Conceptos these are flat records shown in full
@@ -32,21 +33,23 @@ function PublicationCard({ item }) {
                 them to fill a fixed box would cut off panels, axes or legends. */}
             <img
               src={item.figure_url}
-              alt={item.figure_caption || item.title}
+              alt={richTextToPlain(item.figure_caption) || item.title}
               className="w-full max-h-[26rem] object-contain rounded-lg bg-muted"
             />
-            {item.figure_caption && (
-              <figcaption className="text-xs text-muted-foreground mt-2 italic">
-                {item.figure_caption}
-              </figcaption>
+            {hasRichText(item.figure_caption) && (
+              <figcaption
+                className="text-xs text-muted-foreground mt-2 italic [&_p]:m-0 [&_a]:text-secondary [&_a]:underline [&_sub]:align-sub [&_sub]:text-[0.8em] [&_sup]:align-super [&_sup]:text-[0.8em]"
+                dangerouslySetInnerHTML={{ __html: item.figure_caption }}
+              />
             )}
           </figure>
         )}
 
-        {item.abstract && (
-          <p className="text-sm text-foreground/80 mt-5 whitespace-pre-line">
-            {item.abstract}
-          </p>
+        {hasRichText(item.abstract) && (
+          <div
+            className="text-sm text-foreground/80 mt-5 leading-relaxed [&_p]:mb-3 [&_p:last-child]:mb-0 [&_a]:text-secondary [&_a]:underline [&_strong]:font-semibold [&_ul]:list-disc [&_ul]:pl-6 [&_ul]:mb-3 [&_ol]:list-decimal [&_ol]:pl-6 [&_ol]:mb-3 [&_sub]:align-sub [&_sub]:text-[0.8em] [&_sup]:align-super [&_sup]:text-[0.8em]"
+            dangerouslySetInnerHTML={{ __html: item.abstract }}
+          />
         )}
 
         {(item.article_url || item.pdf_url) && (
