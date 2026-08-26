@@ -41,6 +41,10 @@ function sortItems(items, mode) {
   });
 }
 
+// The title is stored as HTML, so both views need the same handling for the
+// paragraph Quill wraps it in and for super/subscripts.
+const TITLE_HTML_CLASS = '[&_p]:m-0 [&_sub]:align-sub [&_sub]:text-[0.8em] [&_sup]:align-super [&_sup]:text-[0.8em]';
+
 /**
  * Publication cards. Unlike Blog/Conceptos these are flat records shown in full
  * on the list itself, so there is no detail route to link into.
@@ -52,7 +56,7 @@ function PublicationCard({ item }) {
     <article className="rounded-xl overflow-hidden bg-card border border-border shadow-sm">
       <div className="p-5 sm:p-6">
         <h2
-          className="font-heading font-semibold text-lg text-primary leading-tight [&_p]:m-0 [&_sub]:align-sub [&_sub]:text-[0.8em] [&_sup]:align-super [&_sup]:text-[0.8em]"
+          className={`font-heading font-semibold text-lg text-primary leading-tight ${TITLE_HTML_CLASS}`}
           dangerouslySetInnerHTML={{ __html: stripPastedColors(item.title) }}
         />
 
@@ -111,8 +115,24 @@ function PublicationCard({ item }) {
   );
 }
 
+/** "Ver como lista": title, authors and year, and deliberately nothing else. */
+function PublicationRow({ item }) {
+  const meta = [item.authors, item.year].filter(Boolean).join(' · ');
+
+  return (
+    <li className="px-4 sm:px-5 py-3">
+      <h2
+        className={`font-heading font-medium text-primary leading-snug ${TITLE_HTML_CLASS}`}
+        dangerouslySetInnerHTML={{ __html: stripPastedColors(item.title) }}
+      />
+      {meta && <p className="text-sm text-muted-foreground mt-0.5">{meta}</p>}
+    </li>
+  );
+}
+
 export default function Publications() {
   const [sort, setSort] = useState('default');
+  const [view, setView] = useState('detail');
 
   const { data: items = [], isLoading } = useQuery({
     queryKey: ['publications'],
@@ -142,19 +162,44 @@ export default function Publications() {
           </p>
         </div>
 
-        {items.length > 1 && (
-          <div className="flex items-center gap-2 shrink-0">
-            <ArrowUpDown className="w-3.5 h-3.5 text-muted-foreground" aria-hidden="true" />
-            <Select value={sort} onValueChange={setSort}>
-              <SelectTrigger className="h-9 w-[200px] text-sm" aria-label="Ordenar publicaciones">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {SORT_OPTIONS.map(o => (
-                  <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+        {items.length > 0 && (
+          <div className="flex flex-wrap items-center gap-2 shrink-0">
+            <div className="inline-flex items-center gap-1 rounded-lg border border-border p-1">
+              <Button
+                type="button"
+                size="sm"
+                variant={view === 'list' ? 'secondary' : 'ghost'}
+                className="h-7 text-xs"
+                onClick={() => setView('list')}
+              >
+                Ver como lista
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant={view === 'detail' ? 'secondary' : 'ghost'}
+                className="h-7 text-xs"
+                onClick={() => setView('detail')}
+              >
+                Ver detalles
+              </Button>
+            </div>
+
+            {items.length > 1 && (
+              <div className="flex items-center gap-2">
+                <ArrowUpDown className="w-3.5 h-3.5 text-muted-foreground" aria-hidden="true" />
+                <Select value={sort} onValueChange={setSort}>
+                  <SelectTrigger className="h-9 w-[200px] text-sm" aria-label="Ordenar publicaciones">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {SORT_OPTIONS.map(o => (
+                      <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -165,6 +210,12 @@ export default function Publications() {
         </div>
       ) : items.length === 0 ? (
         <p className="text-muted-foreground">Aún no hay publicaciones.</p>
+      ) : view === 'list' ? (
+        <ul className="rounded-xl border border-border bg-card divide-y divide-border">
+          {sorted.map(item => (
+            <PublicationRow key={item.id} item={item} />
+          ))}
+        </ul>
       ) : (
         <div className="space-y-6">
           {sorted.map((item, i) => (
