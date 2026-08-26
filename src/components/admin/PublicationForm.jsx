@@ -129,6 +129,17 @@ export default function PublicationForm({ item, onClose }) {
         const { error } = await supabase.from('publications').update(payload).eq('id', item.id);
         if (error) throw error;
       } else {
+        // With a manual order in effect a new row would sort last (sort_order
+        // null goes to the bottom), so it takes the top slot instead -- where a
+        // freshly published paper belongs.
+        const { data: top } = await supabase
+          .from('publications')
+          .select('sort_order')
+          .not('sort_order', 'is', null)
+          .order('sort_order', { ascending: true })
+          .limit(1);
+        if (top?.length) payload.sort_order = top[0].sort_order - 1;
+
         const { error } = await supabase.from('publications').insert(payload);
         if (error) throw error;
       }

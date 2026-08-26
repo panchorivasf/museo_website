@@ -187,8 +187,16 @@ create table if not exists publications (
   article_url text,
   pdf_url text,
   published boolean not null default false,
+  -- Manual display order. Null everywhere means "sort by year", which is the
+  -- default; the admin's custom mode numbers every row and drag-and-drop
+  -- rewrites those numbers. Both lists order by sort_order first (nulls last),
+  -- then year desc, so one query serves either mode.
+  sort_order integer,
   created_at timestamptz default now()
 );
+
+-- Migration for databases created before the manual ordering existed
+alter table publications add column if not exists sort_order integer;
 
 alter table publications enable row level security;
 
