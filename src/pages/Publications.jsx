@@ -16,9 +16,10 @@ function PublicationCard({ item }) {
   return (
     <article className="rounded-xl overflow-hidden bg-card border border-border shadow-sm">
       <div className="p-5 sm:p-6">
-        <h2 className="font-heading font-semibold text-lg text-primary leading-tight">
-          {item.title}
-        </h2>
+        <h2
+          className="font-heading font-semibold text-lg text-primary leading-tight [&_p]:m-0 [&_sub]:align-sub [&_sub]:text-[0.8em] [&_sup]:align-super [&_sup]:text-[0.8em]"
+          dangerouslySetInnerHTML={{ __html: item.title }}
+        />
 
         {item.authors && (
           <p className="text-sm text-muted-foreground mt-1.5">{item.authors}</p>
@@ -33,12 +34,12 @@ function PublicationCard({ item }) {
                 them to fill a fixed box would cut off panels, axes or legends. */}
             <img
               src={item.figure_url}
-              alt={richTextToPlain(item.figure_caption) || item.title}
+              alt={richTextToPlain(item.figure_caption) || richTextToPlain(item.title)}
               className="w-full max-h-[26rem] object-contain rounded-lg bg-muted"
             />
             {hasRichText(item.figure_caption) && (
               <figcaption
-                className="text-xs text-muted-foreground mt-2 italic [&_p]:m-0 [&_a]:text-secondary [&_a]:underline [&_sub]:align-sub [&_sub]:text-[0.8em] [&_sup]:align-super [&_sup]:text-[0.8em]"
+                className="text-xs text-muted-foreground mt-2 [&_p]:m-0 [&_a]:text-secondary [&_a]:underline [&_sub]:align-sub [&_sub]:text-[0.8em] [&_sup]:align-super [&_sup]:text-[0.8em]"
                 dangerouslySetInnerHTML={{ __html: item.figure_caption }}
               />
             )}

@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Plus, Pencil, Trash2, ExternalLink, FileDown } from 'lucide-react';
 import PublicationForm from '@/components/admin/PublicationForm';
 import { scrollToTop } from '@/lib/utils';
+import { richTextToPlain } from '@/lib/richText';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -89,7 +90,7 @@ export default function AdminPublications() {
                           <img src={item.figure_url} alt="" className="w-10 h-10 rounded-lg object-cover" />
                         )}
                         <div>
-                          <p className="font-medium text-primary">{item.title}</p>
+                          <p className="font-medium text-primary">{richTextToPlain(item.title)}</p>
                           <p className="text-xs text-muted-foreground line-clamp-1">
                             {[item.authors, item.venue, item.year].filter(Boolean).join(' · ')}
                           </p>
@@ -130,7 +131,7 @@ export default function AdminPublications() {
           <AlertDialogHeader>
             <AlertDialogTitle>¿Eliminar publicación?</AlertDialogTitle>
             <AlertDialogDescription>
-              Se eliminará &quot;{deleteTarget?.title}&quot; permanentemente.
+              Se eliminará &quot;{richTextToPlain(deleteTarget?.title)}&quot; permanentemente.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

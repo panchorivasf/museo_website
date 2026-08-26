@@ -8,7 +8,18 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { X, Upload, Loader2, Trash2 } from 'lucide-react';
-import { richTextToNull } from '@/lib/richText';
+import { hasRichText, richTextToNull } from '@/lib/richText';
+
+// Titles carry scientific names, so they need italics. Enter is swallowed
+// because the card renders the title as a single-line heading.
+const titleModules = {
+  toolbar: [
+    ['italic'],
+    [{ script: 'super' }, { script: 'sub' }],
+    ['clean'],
+  ],
+  keyboard: { bindings: { enter: { key: 13, handler: () => false } } },
+};
 
 // Superscript/subscript are here for the notation abstracts actually use
 // (kHz ranges, m2, CO2, exponents); italics carry the scientific names.
@@ -134,6 +145,11 @@ export default function PublicationForm({ item, onClose }) {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    // The title is a Quill field now, so `required` on an <input> can't guard it.
+    if (!hasRichText(form.title)) {
+      alert('El título es obligatorio.');
+      return;
+    }
     mutation.mutate();
   };
 
@@ -151,7 +167,14 @@ export default function PublicationForm({ item, onClose }) {
       <form onSubmit={handleSubmit} className="space-y-5">
         <div className="space-y-1.5">
           <Label>Título *</Label>
-          <Input value={form.title} onChange={e => update('title', e.target.value)} required />
+          <div className="bg-background">
+            <ReactQuill
+              theme="snow"
+              modules={titleModules}
+              value={form.title}
+              onChange={html => update('title', html)}
+            />
+          </div>
         </div>
 
         <div className="space-y-1.5">
