@@ -4,6 +4,7 @@ import { Menu, X, AudioWaveform, Sun, Moon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTheme } from '@/lib/ThemeContext';
+import DonateDialog from '@/components/donate/DonateDialog';
 
 const navLinks = [
   { path: '/', label: 'Inicio' },
@@ -46,6 +47,7 @@ export default function Navbar() {
           </div>
 
           <div className="flex items-center gap-1">
+            <DonateDialog />
             <Button variant="ghost" size="icon" onClick={toggle} title={isDark ? 'Modo claro' : 'Modo oscuro'}>
               {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
             </Button>

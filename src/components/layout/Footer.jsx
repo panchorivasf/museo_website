@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { AudioWaveform, MapPin, Mail } from 'lucide-react';
+import { AudioWaveform, MapPin, Mail, Heart } from 'lucide-react';
+import DonateDialog from '@/components/donate/DonateDialog';
 
 export default function Footer() {
   return (
@@ -53,7 +54,25 @@ export default function Footer() {
           </div>
         </div>
 
-        <div className="border-t border-primary-foreground/10 mt-10 pt-6 text-center">
+        <div className="border-t border-primary-foreground/10 mt-10 pt-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <p className="flex items-center gap-1.5 text-sm text-primary-foreground/70">
+            <Heart className="w-4 h-4 text-secondary shrink-0" />
+            Tu aporte ayuda a proteger el patrimonio acústico natural de Chile.
+          </p>
+          <DonateDialog
+            trigger={
+              <button
+                type="button"
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium bg-secondary text-secondary-foreground hover:bg-secondary/90 transition-colors shrink-0"
+              >
+                <Heart className="w-4 h-4" />
+                Donar
+              </button>
+            }
+          />
+        </div>
+
+        <div className="border-t border-primary-foreground/10 mt-6 pt-6 text-center">
           <p className="text-xs text-primary-foreground/50">
             © {new Date().getFullYear()} Museo Bioacústico. Todos los derechos reservados.
           </p>
