@@ -12,6 +12,8 @@ import { Badge } from '@/components/ui/badge';
 import { useTheme } from '@/lib/ThemeContext';
 import { spectrogramSettings } from '@/lib/spectrogram';
 import 'leaflet/dist/leaflet.css';
+import 'maplibre-gl/dist/maplibre-gl.css';
+import '@maplibre/maplibre-gl-leaflet';
 
 const taxonConfig = {
   aves: { label: 'Aves', icon: Bird, color: '#087F8C' },
@@ -39,6 +41,22 @@ function MapBounds({ recordings }) {
       map.fitBounds(bounds, { padding: [50, 50], maxZoom: 10 });
     }
   }, [recordings, map]);
+  return null;
+}
+
+// Dark basemap rendered as MapLibre vector tiles (OpenFreeMap) inside the Leaflet map,
+// instead of CARTO's raster dark_all tiles, which now require an API key.
+function DarkBasemap() {
+  const map = useMap();
+  useEffect(() => {
+    const gl = L.maplibreGL({
+      style: 'https://tiles.openfreemap.org/styles/dark',
+      attribution: '<a href="https://openfreemap.org" target="_blank">OpenFreeMap</a> '
+        + '<a href="https://www.openmaptiles.org/" target="_blank">&copy; OpenMapTiles</a> Data from '
+        + '<a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a>',
+    }).addTo(map);
+    return () => map.removeLayer(gl);
+  }, [map]);
   return null;
 }
 
@@ -202,18 +220,18 @@ export default function BiophonyMap() {
 
   const filteredRecordings = recordings.filter(r => r.latitude && r.longitude && visibleTaxa[r.taxon]);
 
-  const tileUrl = isDark
-    ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-    : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
-
-  const tileAttribution = isDark
-    ? '&copy; <a href="https://www.openstreetmap.org">OSM</a> | Tiles &copy; <a href="https://carto.com">CARTO</a>'
-    : '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
-
   return (
     <div className="h-[calc(100vh-4rem)] relative">
-      <MapContainer center={[-36.82, -73.05]} zoom={6} className="w-full h-full z-0" zoomControl={false}>
-        <TileLayer key={tileUrl} attribution={tileAttribution} url={tileUrl} />
+      <MapContainer center={[-36.82, -73.05]} zoom={6} maxZoom={19} className="w-full h-full z-0" zoomControl={false}>
+        {isDark ? (
+          <DarkBasemap />
+        ) : (
+          <TileLayer
+            key="osm-light"
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          />
+        )}
         <MapBounds recordings={filteredRecordings} />
         <MapEvents />
         <MarkerClusterGroup
